@@ -2,7 +2,8 @@
 
 #include "esphome/core/component.h"
 #include "esphome/core/hal.h"
-#include "esp_private/usb_host.h"
+#include "esp_vfs_dev.h"
+#include "esp_vfs_usb_serial_jtag.h"
 
 namespace esphome {
 namespace usbaudio {
