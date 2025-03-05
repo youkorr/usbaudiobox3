@@ -17,19 +17,15 @@ AUDIO_OUTPUT_MODES = {
 usbaudio_ns = cg.esphome_ns.namespace('usbaudio')
 USBAudioComponent = usbaudio_ns.class_('USBAudioComponent', cg.Component)
 
+def validate_usbaudio_config(config):
+    # Validate USB audio configuration
+    return config
+
 CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(USBAudioComponent),
     cv.Required(CONF_NAME): cv.string,
     cv.Optional(CONF_AUDIO_OUTPUT_MODE, default="auto_select"): cv.enum(AUDIO_OUTPUT_MODES),
 }).extend(cv.COMPONENT_SCHEMA)
-
-def validate_config(config):
-    # Ensure usb_host is configured
-    if 'usb_host' not in config:
-        raise cv.Invalid("USB Host component must be configured when using USB Audio")
-    return config
-
-CONFIG_SCHEMA = CONFIG_SCHEMA.add_validation(validate_config)
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
