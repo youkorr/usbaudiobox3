@@ -18,7 +18,10 @@ void USBAudioComponent::loop() {
 void USBAudioComponent::initialize_usb_audio_() {
   ESP_LOGD(TAG, "Initialisation du mode USB pour l'audio");
   // Initialisation du système de fichiers virtuel USB
-  esp_vfs_dev_usb_serial_jtag_init();
+  esp_err_t ret = esp_vfs_dev_usb_serial_jtag_register();
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG, "Échec de l'initialisation USB: %s", esp_err_to_name(ret));
+  }
 }
 
 void USBAudioComponent::handle_usb_audio_connection_() {
