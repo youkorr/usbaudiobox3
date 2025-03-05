@@ -17,7 +17,6 @@ void USBAudioComponent::loop() {
 
 void USBAudioComponent::initialize_usb_audio_() {
   ESP_LOGD(TAG, "Initialisation du mode USB pour l'audio");
-  // Initialisation du système de fichiers virtuel USB
   esp_err_t ret = esp_vfs_dev_usb_serial_jtag_register();
   if (ret != ESP_OK) {
     ESP_LOGE(TAG, "Échec de l'initialisation USB: %s", esp_err_to_name(ret));
@@ -28,15 +27,15 @@ void USBAudioComponent::handle_usb_audio_connection_() {
   if (detect_usb_audio_device_()) {
     if (!usb_audio_connected_) {
       usb_audio_connected_ = true;
-      if (audio_output_mode_ == AUTO_SELECT) {
-        switch_audio_output_(USB_HEADSET);
+      if (audio_output_mode_ == AudioOutputMode::AUTO_SELECT) {
+        switch_audio_output_(AudioOutputMode::USB_HEADSET);
       }
     }
   } else {
     if (usb_audio_connected_) {
       usb_audio_connected_ = false;
-      if (audio_output_mode_ == AUTO_SELECT) {
-        switch_audio_output_(INTERNAL_SPEAKERS);
+      if (audio_output_mode_ == AudioOutputMode::AUTO_SELECT) {
+        switch_audio_output_(AudioOutputMode::INTERNAL_SPEAKERS);
       }
     }
   }
@@ -44,24 +43,23 @@ void USBAudioComponent::handle_usb_audio_connection_() {
 
 bool USBAudioComponent::detect_usb_audio_device_() {
   // Cette implémentation est un exemple et devra être adaptée à votre matériel spécifique
-  // Vous devrez probablement utiliser les API USB de l'ESP-IDF pour détecter réellement un périphérique audio USB
   return false;
 }
 
 void USBAudioComponent::switch_audio_output_(AudioOutputMode mode) {
-  ESP_LOGD(TAG, "Changement de sortie audio : %d", mode);
+  ESP_LOGD(TAG, "Changement de sortie audio : %d", static_cast<int>(mode));
   switch (mode) {
-    case INTERNAL_SPEAKERS:
+    case AudioOutputMode::INTERNAL_SPEAKERS:
       ESP_LOGD(TAG, "Sortie audio : Haut-parleurs internes");
       break;
-    case USB_HEADSET:
+    case AudioOutputMode::USB_HEADSET:
       ESP_LOGD(TAG, "Sortie audio : Casque USB");
       break;
-    case AUTO_SELECT:
+    case AudioOutputMode::AUTO_SELECT:
       if (usb_audio_connected_) {
-        switch_audio_output_(USB_HEADSET);
+        switch_audio_output_(AudioOutputMode::USB_HEADSET);
       } else {
-        switch_audio_output_(INTERNAL_SPEAKERS);
+        switch_audio_output_(AudioOutputMode::INTERNAL_SPEAKERS);
       }
       break;
   }
@@ -84,7 +82,7 @@ void USBAudioComponent::stop() {
 
 void USBAudioComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "Configuration Audio USB:");
-  ESP_LOGCONFIG(TAG, "  Mode audio: %d", this->audio_output_mode_);
+  ESP_LOGCONFIG(TAG, "  Mode audio: %d", static_cast<int>(this->audio_output_mode_));
   ESP_LOGCONFIG(TAG, "  Casque USB connecté: %s", usb_audio_connected_ ? "Oui" : "Non");
 }
 
@@ -94,5 +92,6 @@ bool USBAudioComponent::is_usb_headset_connected() {
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
 
