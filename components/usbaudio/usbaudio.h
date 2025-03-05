@@ -3,7 +3,6 @@
 #include "esphome/core/component.h"
 #include "esphome/core/hal.h"
 #include "esp_private/usb_host.h"
-#include "driver/i2s.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -26,7 +25,6 @@ class USBAudioComponent : public Component {
   void stop();
 
  protected:
-  void initialize_internal_speakers_();
   void initialize_usb_audio_();
   void handle_usb_audio_connection_();
   bool detect_usb_audio_device_();
