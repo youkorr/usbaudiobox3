@@ -18,17 +18,17 @@ AUDIO_OUTPUT_MODES = {
 usbaudio_ns = cg.esphome_ns.namespace('usbaudio')
 USBAudioComponent = usbaudio_ns.class_('USBAudioComponent', cg.Component)
 
-# Define the USBAUDIO_SCHEMA directly in this file
-USBAUDIO_SCHEMA = cv.Schema({
+CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(USBAudioComponent),
     cv.Required(CONF_NAME): cv.string,
     cv.Optional(CONF_AUDIO_OUTPUT_MODE, default="auto_select"): cv.enum(AUDIO_OUTPUT_MODES),
-})
-
-CONFIG_SCHEMA = USBAUDIO_SCHEMA.extend(cv.COMPONENT_SCHEMA)
+}).extend(cv.COMPONENT_SCHEMA)
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
-    cg.add(var.set_audio_output_mode(AUDIO_OUTPUT_MODES[config[CONF_AUDIO_OUTPUT_MODE]]))
+    
+    # Set the audio output mode
+    output_mode = AUDIO_OUTPUT_MODES[config[CONF_AUDIO_OUTPUT_MODE]]
+    cg.add(var.set_audio_output_mode(output_mode))
 
