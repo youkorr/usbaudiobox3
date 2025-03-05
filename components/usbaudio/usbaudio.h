@@ -19,6 +19,7 @@ class USBAudioComponent : public Component {
   void dump_config() override;
 
   void set_audio_output_mode(AudioOutputMode mode);
+  void set_audio_output_mode(int mode);  // Ajout d'une surcharge pour int
   AudioOutputMode get_audio_output_mode() const { return audio_output_mode_; }
   bool is_usb_headset_connected() const { return usb_audio_connected_; }
 
