@@ -33,6 +33,15 @@ void USBAudioComponent::set_audio_output_mode(AudioOutputMode mode) {
   apply_audio_output_();
 }
 
+void USBAudioComponent::set_audio_output_mode(int mode) {
+  if (mode >= 0 && mode <= 2) {
+    audio_output_mode_ = static_cast<AudioOutputMode>(mode);
+    apply_audio_output_();
+  } else {
+    ESP_LOGE(TAG, "Mode audio invalide: %d", mode);
+  }
+}
+
 void USBAudioComponent::apply_audio_output_() {
   AudioOutputMode effective_mode = audio_output_mode_;
   if (effective_mode == AudioOutputMode::AUTO_SELECT) {
