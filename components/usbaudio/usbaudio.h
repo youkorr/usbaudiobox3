@@ -1,7 +1,8 @@
 #pragma once
 
 #include "esphome/core/component.h"
-#include "driver/usb_host.h"
+#include "esphome/core/hal.h"
+#include "esp_private/usb_host.h"
 #include "driver/i2s.h"
 
 namespace esphome {
