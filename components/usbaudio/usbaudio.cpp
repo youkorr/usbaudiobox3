@@ -1,5 +1,6 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
+#include "driver/usb_host.h"
 
 namespace esphome {
 namespace usbaudio {
