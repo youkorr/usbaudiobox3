@@ -1,6 +1,5 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
-#include "esp_private/usb_host.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -17,11 +16,9 @@ void USBAudioComponent::loop() {
 }
 
 void USBAudioComponent::initialize_usb_audio_() {
-  ESP_LOGD(TAG, "Initialisation du mode USB Host pour l'audio");
-  const usb_host_config_t host_config = {
-    .intr_flags = ESP_INTR_FLAG_LEVEL1,
-  };
-  ESP_ERROR_CHECK(usb_host_install(&host_config));
+  ESP_LOGD(TAG, "Initialisation du mode USB pour l'audio");
+  // Initialisation du système de fichiers virtuel USB
+  esp_vfs_dev_usb_serial_jtag_init();
 }
 
 void USBAudioComponent::handle_usb_audio_connection_() {
@@ -43,7 +40,8 @@ void USBAudioComponent::handle_usb_audio_connection_() {
 }
 
 bool USBAudioComponent::detect_usb_audio_device_() {
-  // This is a placeholder. You'll need to implement proper USB audio device detection.
+  // Cette implémentation est un exemple et devra être adaptée à votre matériel spécifique
+  // Vous devrez probablement utiliser les API USB de l'ESP-IDF pour détecter réellement un périphérique audio USB
   return false;
 }
 
