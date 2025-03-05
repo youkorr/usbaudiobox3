@@ -1,6 +1,6 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
-#include "driver/usb_host.h"
+#include "esp_private/usb_host.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -25,11 +25,13 @@ void USBAudioComponent::initialize_internal_speakers_() {
       .sample_rate = 44100,
       .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
       .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
-      .communication_format = I2S_COMM_FORMAT_I2S_MSB,
-      .intr_alloc_flags = 0,
+      .communication_format = I2S_COMM_FORMAT_STAND_I2S,
+      .intr_alloc_flags = ESP_INTR_FLAG_LEVEL1,
       .dma_buf_count = 8,
       .dma_buf_len = 64,
-      .use_apll = false
+      .use_apll = false,
+      .tx_desc_auto_clear = true,
+      .fixed_mclk = 0
   };
 
   i2s_pin_config_t pin_config = {
@@ -39,15 +41,16 @@ void USBAudioComponent::initialize_internal_speakers_() {
       .data_in_num = I2S_PIN_NO_CHANGE
   };
 
-  i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL);
-  i2s_set_pin(I2S_NUM_0, &pin_config);
+  ESP_ERROR_CHECK(i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL));
+  ESP_ERROR_CHECK(i2s_set_pin(I2S_NUM_0, &pin_config));
 }
 
 void USBAudioComponent::initialize_usb_audio_() {
   ESP_LOGD(TAG, "Initialisation du mode USB Host pour l'audio");
-  usb_host_config_t config = {};
-  config.intr_flags = ESP_INTR_FLAG_LOWMED;
-  ESP_ERROR_CHECK(usb_host_install(&config));
+  const usb_host_config_t host_config = {
+    .intr_flags = ESP_INTR_FLAG_LEVEL1,
+  };
+  ESP_ERROR_CHECK(usb_host_install(&host_config));
 }
 
 void USBAudioComponent::handle_usb_audio_connection_() {
@@ -69,7 +72,8 @@ void USBAudioComponent::handle_usb_audio_connection_() {
 }
 
 bool USBAudioComponent::detect_usb_audio_device_() {
-  return usb_host_device_free_all() == ESP_OK;
+  // This is a placeholder. You'll need to implement proper USB audio device detection.
+  return false;
 }
 
 void USBAudioComponent::switch_audio_output_(AudioOutputMode mode) {
@@ -98,12 +102,12 @@ void USBAudioComponent::set_audio_output_mode(AudioOutputMode mode) {
 
 void USBAudioComponent::play() {
   ESP_LOGD(TAG, "Lecture audio...");
-  // TODO: Envoyer un signal de lecture via I2S ou USB
+  // TODO: Implement audio playback
 }
 
 void USBAudioComponent::stop() {
   ESP_LOGD(TAG, "Arrêt de la lecture audio...");
-  // TODO: Arrêter l'envoi des données audio
+  // TODO: Implement audio stop
 }
 
 void USBAudioComponent::dump_config() {
