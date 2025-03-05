@@ -3,6 +3,9 @@ import esphome.config_validation as cv
 from esphome.components import usb_host
 from esphome.const import CONF_ID, CONF_NAME
 
+# Import the usbaudio component
+from esphome.components import usbaudio
+
 CODEOWNERS = ["@your_github_username"]
 DEPENDENCIES = ["usbaudio"]
 AUTO_LOAD = ["usbaudio"]
