@@ -1,6 +1,5 @@
-// usbaudio.cpp
 #include "usbaudio.h"
-#include "esp_log.h"
+#include "esphome/core/log.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -8,7 +7,7 @@ namespace usbaudio {
 static const char *const TAG = "usbaudio";
 
 void USBAudioComponent::setup() {
-  ESP_LOGD(TAG, "Setting up USB Audio Component");
+  ESP_LOGD(TAG, "Initialisation de l'Audio USB pour ESP32-S3 Box 3");
   initialize_internal_speakers_();
   initialize_usb_audio_();
 }
@@ -18,66 +17,101 @@ void USBAudioComponent::loop() {
 }
 
 void USBAudioComponent::initialize_internal_speakers_() {
-  ESP_LOGD(TAG, "Initializing internal speakers");
+  ESP_LOGD(TAG, "Configuration des haut-parleurs internes via I2S");
+
+  i2s_config_t i2s_config = {
+      .mode = (i2s_mode_t)(I2S_MODE_MASTER | I2S_MODE_TX),
+      .sample_rate = 44100,
+      .bits_per_sample = I2S_BITS_PER_SAMPLE_16BIT,
+      .channel_format = I2S_CHANNEL_FMT_RIGHT_LEFT,
+      .communication_format = I2S_COMM_FORMAT_I2S_MSB,
+      .intr_alloc_flags = 0,
+      .dma_buf_count = 8,
+      .dma_buf_len = 64,
+      .use_apll = false
+  };
+
+  i2s_pin_config_t pin_config = {
+      .bck_io_num = GPIO_NUM_41,
+      .ws_io_num = GPIO_NUM_42,
+      .data_out_num = GPIO_NUM_40,
+      .data_in_num = I2S_PIN_NO_CHANGE
+  };
+
+  i2s_driver_install(I2S_NUM_0, &i2s_config, 0, NULL);
+  i2s_set_pin(I2S_NUM_0, &pin_config);
 }
 
 void USBAudioComponent::initialize_usb_audio_() {
-  ESP_LOGD(TAG, "Initializing USB audio");
+  ESP_LOGD(TAG, "Initialisation du mode USB Host pour l'audio");
+  usb_host_config_t config = {};
+  config.intr_flags = ESP_INTR_FLAG_LOWMED;
+  ESP_ERROR_CHECK(usb_host_install(&config));
 }
 
 void USBAudioComponent::handle_usb_audio_connection_() {
   if (detect_usb_audio_device_()) {
     if (!usb_audio_connected_) {
       usb_audio_connected_ = true;
-      if (audio_output_mode_ == 2) switch_audio_output_(1);
+      if (audio_output_mode_ == AUTO_SELECT) {
+        switch_audio_output_(USB_HEADSET);
+      }
     }
   } else {
     if (usb_audio_connected_) {
       usb_audio_connected_ = false;
-      if (audio_output_mode_ == 2) switch_audio_output_(0);
+      if (audio_output_mode_ == AUTO_SELECT) {
+        switch_audio_output_(INTERNAL_SPEAKERS);
+      }
     }
   }
 }
 
 bool USBAudioComponent::detect_usb_audio_device_() {
-  ESP_LOGD(TAG, "Checking for USB audio device");
-  return false; // Replace with actual detection logic
+  return usb_host_device_free_all() == ESP_OK;
 }
 
-void USBAudioComponent::switch_audio_output_(int mode) {
-  ESP_LOGD(TAG, "Switching audio output to %d", mode);
+void USBAudioComponent::switch_audio_output_(AudioOutputMode mode) {
+  ESP_LOGD(TAG, "Changement de sortie audio : %d", mode);
+  switch (mode) {
+    case INTERNAL_SPEAKERS:
+      ESP_LOGD(TAG, "Sortie audio : Haut-parleurs internes");
+      break;
+    case USB_HEADSET:
+      ESP_LOGD(TAG, "Sortie audio : Casque USB");
+      break;
+    case AUTO_SELECT:
+      if (usb_audio_connected_) {
+        switch_audio_output_(USB_HEADSET);
+      } else {
+        switch_audio_output_(INTERNAL_SPEAKERS);
+      }
+      break;
+  }
+}
+
+void USBAudioComponent::set_audio_output_mode(AudioOutputMode mode) {
+  this->audio_output_mode_ = mode;
+  switch_audio_output_(mode);
 }
 
 void USBAudioComponent::play() {
-  ESP_LOGD(TAG, "Play");
-}
-
-void USBAudioComponent::pause() {
-  ESP_LOGD(TAG, "Pause");
+  ESP_LOGD(TAG, "Lecture audio...");
+  // TODO: Envoyer un signal de lecture via I2S ou USB
 }
 
 void USBAudioComponent::stop() {
-  ESP_LOGD(TAG, "Stop");
-}
-
-media_player::MediaPlayerState USBAudioComponent::get_state() {
-  return current_state_;
-}
-
-void USBAudioComponent::set_volume(float volume) {
-  current_volume_ = volume;
-  ESP_LOGD(TAG, "Setting volume to %.2f", volume);
-}
-
-void USBAudioComponent::set_media_url(const std::string &url) {
-  current_media_url_ = url;
-  ESP_LOGD(TAG, "Setting media URL: %s", url.c_str());
+  ESP_LOGD(TAG, "Arrêt de la lecture audio...");
+  // TODO: Arrêter l'envoi des données audio
 }
 
 void USBAudioComponent::dump_config() {
-  ESP_LOGCONFIG(TAG, "USB Audio Config");
+  ESP_LOGCONFIG(TAG, "Configuration Audio USB:");
+  ESP_LOGCONFIG(TAG, "  Mode audio: %d", this->audio_output_mode_);
+  ESP_LOGCONFIG(TAG, "  Casque USB connecté: %s", usb_audio_connected_ ? "Oui" : "Non");
 }
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
