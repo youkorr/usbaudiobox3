@@ -30,5 +30,5 @@ async def to_code(config):
     cg.add(var.set_audio_output_mode(output_mode))
 
     # Add ESP-IDF dependencies
-    cg.add_library("esp_private/usb_host", None)
+    cg.add_library("esp32", "1.0.6")
 
