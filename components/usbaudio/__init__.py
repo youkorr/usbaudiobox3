@@ -3,7 +3,6 @@ import esphome.config_validation as cv
 from esphome.const import CONF_ID
 
 DEPENDENCIES = ["esp32"]
-AUTO_LOAD = ["uac_host"]  # Assurez-vous que cette ligne est présente
 
 CONF_AUDIO_OUTPUT_MODE = "audio_output_mode"
 
@@ -27,7 +26,4 @@ async def to_code(config):
     
     if CONF_AUDIO_OUTPUT_MODE in config:
         cg.add(var.set_audio_output_mode(AUDIO_OUTPUT_MODES[config[CONF_AUDIO_OUTPUT_MODE]]))
-
-    # Assurez-vous que le composant UAC Host est chargé
-    cg.add_library("uac_host", None)
 
