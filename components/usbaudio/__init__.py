@@ -1,10 +1,10 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.const import CONF_ID, CONF_NAME
+from esphome import pins
 
-CODEOWNERS = ["@your_github_username"]
 DEPENDENCIES = ["usb_host"]
-AUTO_LOAD = ["usbaudio"]
+AUTO_LOAD = ["usb_host"]
 
 CONF_AUDIO_OUTPUT_MODE = "audio_output_mode"
 
@@ -17,10 +17,6 @@ AUDIO_OUTPUT_MODES = {
 usbaudio_ns = cg.esphome_ns.namespace('usbaudio')
 USBAudioComponent = usbaudio_ns.class_('USBAudioComponent', cg.Component)
 
-def validate_usbaudio_config(config):
-    # Validate USB audio configuration
-    return config
-
 CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(USBAudioComponent),
     cv.Required(CONF_NAME): cv.string,
@@ -31,7 +27,12 @@ async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await cg.register_component(var, config)
     
+    # Ensure USB host is loaded
+    cg.add_library("usb_host", None)
+    
     # Set the audio output mode
     output_mode = AUDIO_OUTPUT_MODES[config[CONF_AUDIO_OUTPUT_MODE]]
     cg.add(var.set_audio_output_mode(output_mode))
+
+    # You might need to add more configuration here, depending on your USBAudioComponent implementation
 
