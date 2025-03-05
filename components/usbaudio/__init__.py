@@ -1,6 +1,5 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import usb_host
 from esphome.const import CONF_ID, CONF_NAME
 
 CODEOWNERS = ["@your_github_username"]
@@ -23,6 +22,14 @@ CONFIG_SCHEMA = cv.Schema({
     cv.Required(CONF_NAME): cv.string,
     cv.Optional(CONF_AUDIO_OUTPUT_MODE, default="auto_select"): cv.enum(AUDIO_OUTPUT_MODES),
 }).extend(cv.COMPONENT_SCHEMA)
+
+def validate_config(config):
+    # Ensure usb_host is configured
+    if 'usb_host' not in config:
+        raise cv.Invalid("USB Host component must be configured when using USB Audio")
+    return config
+
+CONFIG_SCHEMA = CONFIG_SCHEMA.add_validation(validate_config)
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
