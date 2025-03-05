@@ -4,8 +4,8 @@ from esphome.components import usb_host
 from esphome.const import CONF_ID, CONF_NAME
 
 CODEOWNERS = ["@your_github_username"]
-DEPENDENCIES = ["usb_host"]
-AUTO_LOAD = ["usb_host"]
+DEPENDENCIES = ["usbaudio"]
+AUTO_LOAD = ["usbaudio"]
 
 CONF_AUDIO_OUTPUT_MODE = "audio_output_mode"
 
@@ -18,7 +18,7 @@ AUDIO_OUTPUT_MODES = {
 usbaudio_ns = cg.esphome_ns.namespace('usbaudio')
 USBAudioComponent = usbaudio_ns.class_('USBAudioComponent', cg.Component)
 
-CONFIG_SCHEMA = usb_host.USB_HOST_SCHEMA.extend({
+CONFIG_SCHEMA = usbaudio.USBAUDIO_SCHEMA.extend({
     cv.GenerateID(): cv.declare_id(USBAudioComponent),
     cv.Required(CONF_NAME): cv.string,
     cv.Optional(CONF_AUDIO_OUTPUT_MODE, default="auto_select"): cv.enum(AUDIO_OUTPUT_MODES),
