@@ -14,6 +14,7 @@ AUDIO_OUTPUT_MODES = {
 
 usbaudio_ns = cg.esphome_ns.namespace('usbaudio')
 USBAudioComponent = usbaudio_ns.class_('USBAudioComponent', cg.Component)
+AudioOutputMode = usbaudio_ns.enum('AudioOutputMode')
 
 CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(USBAudioComponent),
@@ -27,7 +28,7 @@ async def to_code(config):
     
     # Set the audio output mode
     output_mode = AUDIO_OUTPUT_MODES[config[CONF_AUDIO_OUTPUT_MODE]]
-    cg.add(var.set_audio_output_mode(output_mode))
+    cg.add(var.set_audio_output_mode(cg.RawExpression(f'esphome::usbaudio::AudioOutputMode::{AudioOutputMode.enum_values[output_mode]}')))
 
     # Add ESP-IDF dependencies
     cg.add_library("esp32", "1.0.6")
