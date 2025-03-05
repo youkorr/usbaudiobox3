@@ -112,6 +112,10 @@ void USBAudioComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "  Casque USB connecté: %s", usb_audio_connected_ ? "Oui" : "Non");
 }
 
+bool USBAudioComponent::is_usb_headset_connected() {
+  return usb_audio_connected_;
+}
+
 }  // namespace usbaudio
 }  // namespace esphome
 
