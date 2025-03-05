@@ -1,35 +1,68 @@
-import esphome.codegen as cg
-import esphome.config_validation as cv
-from esphome.const import CONF_ID
+#include "usbaudio.h"
+#include "esphome/core/log.h"
 
-DEPENDENCIES = ["esp32"]
-AUTO_LOAD = ["uac_host"]  # Assurez-vous que cette ligne est présente
+namespace esphome {
+namespace usbaudio {
 
-CONF_AUDIO_OUTPUT_MODE = "audio_output_mode"
+static const char *const TAG = "usbaudio";
 
-AUDIO_OUTPUT_MODES = {
-    "internal_speakers": 0,
-    "usb_headset": 1,
-    "auto_select": 2,
+void USBAudioComponent::setup() {
+  ESP_LOGD(TAG, "Initialisation de l'Audio USB pour ESP32-S3 Box 3");
 }
 
-usbaudio_ns = cg.esphome_ns.namespace('usbaudio')
-USBAudioComponent = usbaudio_ns.class_('USBAudioComponent', cg.Component)
+void USBAudioComponent::loop() {
+  handle_usb_audio_connection_();
+}
 
-CONFIG_SCHEMA = cv.Schema({
-    cv.GenerateID(): cv.declare_id(USBAudioComponent),
-    cv.Optional(CONF_AUDIO_OUTPUT_MODE, default="auto_select"): cv.enum(AUDIO_OUTPUT_MODES),
-}).extend(cv.COMPONENT_SCHEMA)
+void USBAudioComponent::handle_usb_audio_connection_() {
+  bool new_usb_audio_state = detect_usb_audio_device_();
+  if (new_usb_audio_state != usb_audio_connected_) {
+    usb_audio_connected_ = new_usb_audio_state;
+    apply_audio_output_();
+  }
+}
 
-async def to_code(config):
-    var = cg.new_Pvariable(config[CONF_ID])
-    await cg.register_component(var, config)
-    
-    if CONF_AUDIO_OUTPUT_MODE in config:
-        cg.add(var.set_audio_output_mode(AUDIO_OUTPUT_MODES[config[CONF_AUDIO_OUTPUT_MODE]]))
+bool USBAudioComponent::detect_usb_audio_device_() {
+  // Cette fonction devrait implémenter la logique de détection du périphérique USB
+  // Pour l'instant, nous retournons une valeur fixe
+  return false;
+}
 
-    # Assurez-vous que le composant UAC Host est chargé
-    cg.add_library("uac_host", None)
+void USBAudioComponent::set_audio_output_mode(AudioOutputMode mode) {
+  audio_output_mode_ = mode;
+  apply_audio_output_();
+}
+
+void USBAudioComponent::apply_audio_output_() {
+  AudioOutputMode effective_mode = audio_output_mode_;
+  if (effective_mode == AudioOutputMode::AUTO_SELECT) {
+    effective_mode = usb_audio_connected_ ? AudioOutputMode::USB_HEADSET : AudioOutputMode::INTERNAL_SPEAKERS;
+  }
+
+  ESP_LOGD(TAG, "Applying audio output: %d", static_cast<int>(effective_mode));
+  switch (effective_mode) {
+    case AudioOutputMode::INTERNAL_SPEAKERS:
+      ESP_LOGD(TAG, "Sortie audio : Haut-parleurs internes");
+      // Ajoutez ici le code pour basculer vers les haut-parleurs internes
+      break;
+    case AudioOutputMode::USB_HEADSET:
+      ESP_LOGD(TAG, "Sortie audio : Casque USB");
+      // Ajoutez ici le code pour basculer vers le casque USB
+      break;
+    default:
+      ESP_LOGE(TAG, "Mode audio invalide");
+      break;
+  }
+}
+
+void USBAudioComponent::dump_config() {
+  ESP_LOGCONFIG(TAG, "Configuration Audio USB:");
+  ESP_LOGCONFIG(TAG, "  Mode audio: %d", static_cast<int>(this->audio_output_mode_));
+  ESP_LOGCONFIG(TAG, "  Casque USB connecté: %s", usb_audio_connected_ ? "Oui" : "Non");
+}
+
+}  // namespace usbaudio
+}  // namespace esphome
 
 
 
