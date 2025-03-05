@@ -25,5 +25,5 @@ async def to_code(config):
     await cg.register_component(var, config)
     
     if CONF_AUDIO_OUTPUT_MODE in config:
-        cg.add(var.set_audio_output_mode(config[CONF_AUDIO_OUTPUT_MODE]))
+        cg.add(var.set_audio_output_mode(AUDIO_OUTPUT_MODES[config[CONF_AUDIO_OUTPUT_MODE]]))
 
