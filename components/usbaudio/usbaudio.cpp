@@ -1,6 +1,5 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
-#include "soc/rtc_cntl_reg.h"
 #include "driver/gpio.h"
 
 namespace esphome {
@@ -23,10 +22,12 @@ void USBAudioComponent::set_audio_output_mode(int mode) {
   }
 }
 
-// 🔥 Vérification VBUS pour voir si l'USB est branché
+// ✅ Détection VBUS via GPIO19
 bool USBAudioComponent::detect_usb_audio_device_() {
-  bool vbus_present = (READ_PERI_REG(RTC_CNTL_USB_DEVICE_CONF_REG) & RTC_CNTL_USB_VBUS_VALID) != 0;
-  ESP_LOGD(TAG, "Détection USB VBUS: %s", vbus_present ? "Présent" : "Absent");
+  gpio_set_direction(GPIO_NUM_19, GPIO_MODE_INPUT);
+  bool vbus_present = gpio_get_level(GPIO_NUM_19);
+
+  ESP_LOGD(TAG, "Détection USB VBUS (GPIO19) : %s", vbus_present ? "Présent" : "Absent");
   return vbus_present;
 }
 
@@ -41,11 +42,9 @@ void USBAudioComponent::apply_audio_output_() {
   switch (effective_mode) {
     case AudioOutputMode::INTERNAL_SPEAKERS:
       ESP_LOGD(TAG, "Activation des haut-parleurs internes");
-      // Ajouter la logique pour les haut-parleurs internes
       break;
     case AudioOutputMode::USB_HEADSET:
       ESP_LOGD(TAG, "Activation du casque USB");
-      // Ajouter la logique pour rediriger l'audio vers USB
       break;
     default:
       ESP_LOGE(TAG, "Mode audio inconnu");
@@ -88,6 +87,7 @@ void USBAudioComponent::update_text_sensor() {
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
 
 
