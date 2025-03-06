@@ -1,11 +1,13 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
-#include "driver/gpio.h"
+#include "usb_host_uac.h"
 
 namespace esphome {
 namespace usbaudio {
 
 static const char *const TAG = "usbaudio";
+
+USBHostUAC uac;
 
 void USBAudioComponent::set_audio_output_mode(AudioOutputMode mode) {
   if (audio_output_mode_ != mode) {
@@ -23,20 +25,8 @@ void USBAudioComponent::set_audio_output_mode(int mode) {
 }
 
 bool USBAudioComponent::detect_usb_audio_device_() {
-  // Détection basée sur une broche GPIO spécifique à l'ESP32-S3-BOX-3
-  const int detect_pin = 3;  // Broche GPIO3 pour la détection USB
-  
-  // Configuration de la broche en entrée avec résistance pull-down
-  gpio_config_t io_conf;
-  io_conf.intr_type = GPIO_INTR_DISABLE;
-  io_conf.mode = GPIO_MODE_INPUT;
-  io_conf.pin_bit_mask = (1ULL << detect_pin);
-  io_conf.pull_down_en = GPIO_PULLDOWN_ENABLE;
-  io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
-  gpio_config(&io_conf);
-  
-  // Lecture de l'état de la broche
-  bool detected = gpio_get_level(static_cast<gpio_num_t>(detect_pin)) == 1;
+  // Détection via usb_host_uac
+  bool detected = uac.isConnected();
   
   ESP_LOGD(TAG, "État de détection USB: %s", detected ? "Détecté" : "Non détecté");
   
@@ -68,6 +58,13 @@ void USBAudioComponent::apply_audio_output_() {
 
 void USBAudioComponent::setup() {
   ESP_LOGD(TAG, "Initialisation du composant USB Audio");
+  
+  // Initialisation de usb_host_uac
+  if (!uac.begin()) {
+    ESP_LOGE(TAG, "Échec de l'initialisation de usb_host_uac");
+    return;
+  }
+  
   usb_audio_connected_ = detect_usb_audio_device_();
   apply_audio_output_();
 }
