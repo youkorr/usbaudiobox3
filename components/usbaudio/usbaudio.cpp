@@ -1,6 +1,6 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
-#include "driver/usb_serial_jtag.h"
+#include "driver/gpio.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -23,19 +23,22 @@ void USBAudioComponent::set_audio_output_mode(int mode) {
 }
 
 bool USBAudioComponent::detect_usb_audio_device_() {
-  // Utilisation de l'interface USB Serial JTAG pour détecter la présence USB
-  uint8_t dtr, rts;
-  esp_err_t err = usb_serial_jtag_get_line_state(&dtr, &rts);
+  // Détection basée sur la tension VBUS (5V) sur une broche GPIO
+  // Vous devez connecter VBUS à une broche GPIO via un diviseur de tension
+  const int vbus_pin = 4;  // Changer selon votre configuration matérielle
+  const float vbus_threshold = 3.3f;  // Seuil de détection
   
-  if (err != ESP_OK) {
-    ESP_LOGD(TAG, "Erreur de détection USB: %s", esp_err_to_name(err));
-    return false;
-  }
-
-  // Une simple détection basée sur l'état de la ligne
-  bool detected = (dtr == 1 || rts == 1);
-  ESP_LOGD(TAG, "État USB - DTR: %d, RTS: %d", dtr, rts);
-  return detected;
+  // Configuration de la broche en entrée analogique
+  adc1_config_width(ADC_WIDTH_BIT_12);
+  adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_11);
+  
+  // Lecture de la tension
+  int raw_value = adc1_get_raw(ADC1_CHANNEL_0);
+  float voltage = (raw_value / 4095.0f) * 3.3f;
+  
+  ESP_LOGD(TAG, "Tension VBUS mesurée: %.2fV", voltage);
+  
+  return voltage > vbus_threshold;
 }
 
 void USBAudioComponent::apply_audio_output_() {
