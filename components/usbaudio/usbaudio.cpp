@@ -2,8 +2,7 @@
 #include "esphome/core/log.h"
 
 // Ajouter les bibliothèques USB nécessaires
-#include "USB.h"
-#include "USBH.h"
+
 #include "usb/usb_host.h"
 
 // Si vous utilisez TinyUSB
