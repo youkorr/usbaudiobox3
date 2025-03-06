@@ -1,6 +1,7 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
-#include "driver/usb_device.h"
+#include "soc/rtc_cntl_reg.h"
+#include "driver/gpio.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -22,20 +23,11 @@ void USBAudioComponent::set_audio_output_mode(int mode) {
   }
 }
 
+// 🔥 Vérification VBUS pour voir si l'USB est branché
 bool USBAudioComponent::detect_usb_audio_device_() {
-  // Vérification si un périphérique USB est connecté via le port USB natif
-  usb_device_status_t usb_status;
-  esp_err_t err = usb_device_get_status(&usb_status);
-
-  if (err != ESP_OK) {
-    ESP_LOGD(TAG, "Erreur de détection USB: %s", esp_err_to_name(err));
-    return false;
-  }
-
-  bool detected = (usb_status == USB_DEVICE_STATUS_POWERED) || (usb_status == USB_DEVICE_STATUS_CONFIGURED);
-  ESP_LOGD(TAG, "État de détection USB: %s", detected ? "Détecté" : "Non détecté");
-
-  return detected;
+  bool vbus_present = (READ_PERI_REG(RTC_CNTL_USB_DEVICE_CONF_REG) & RTC_CNTL_USB_VBUS_VALID) != 0;
+  ESP_LOGD(TAG, "Détection USB VBUS: %s", vbus_present ? "Présent" : "Absent");
+  return vbus_present;
 }
 
 void USBAudioComponent::apply_audio_output_() {
@@ -96,6 +88,7 @@ void USBAudioComponent::update_text_sensor() {
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
 
 
