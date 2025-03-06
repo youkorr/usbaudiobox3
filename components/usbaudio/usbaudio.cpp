@@ -1,13 +1,11 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
-#include "usb_host_uac.h"
+#include "driver/usb_serial_jtag.h"
 
 namespace esphome {
 namespace usbaudio {
 
 static const char *const TAG = "usbaudio";
-
-USBHostUAC uac;
 
 void USBAudioComponent::set_audio_output_mode(AudioOutputMode mode) {
   if (audio_output_mode_ != mode) {
@@ -25,9 +23,16 @@ void USBAudioComponent::set_audio_output_mode(int mode) {
 }
 
 bool USBAudioComponent::detect_usb_audio_device_() {
-  // Détection via usb_host_uac
-  bool detected = uac.isConnected();
+  // Détection basée sur l'état de l'USB
+  usb_serial_jtag_driver_config_t config;
+  esp_err_t err = usb_serial_jtag_driver_install(&config);
   
+  if (err != ESP_OK) {
+    ESP_LOGD(TAG, "Erreur d'initialisation USB: %s", esp_err_to_name(err));
+    return false;
+  }
+  
+  bool detected = usb_serial_jtag_is_connected();
   ESP_LOGD(TAG, "État de détection USB: %s", detected ? "Détecté" : "Non détecté");
   
   return detected;
@@ -58,13 +63,6 @@ void USBAudioComponent::apply_audio_output_() {
 
 void USBAudioComponent::setup() {
   ESP_LOGD(TAG, "Initialisation du composant USB Audio");
-  
-  // Initialisation de usb_host_uac
-  if (!uac.begin()) {
-    ESP_LOGE(TAG, "Échec de l'initialisation de usb_host_uac");
-    return;
-  }
-  
   usb_audio_connected_ = detect_usb_audio_device_();
   apply_audio_output_();
 }
