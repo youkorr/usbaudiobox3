@@ -23,22 +23,19 @@ void USBAudioComponent::set_audio_output_mode(int mode) {
 }
 
 bool USBAudioComponent::detect_usb_audio_device_() {
-  // Détection basée sur la tension VBUS (5V) sur une broche GPIO
-  // Vous devez connecter VBUS à une broche GPIO via un diviseur de tension
-  const int vbus_pin = 4;  // Changer selon votre configuration matérielle
-  const float vbus_threshold = 3.3f;  // Seuil de détection
+  // Détection basée sur une broche GPIO
+  // Vous devez connecter un signal USB_DETECT à une broche GPIO
+  const int detect_pin = 4;  // Changer selon votre configuration matérielle
   
-  // Configuration de la broche en entrée analogique
-  adc1_config_width(ADC_WIDTH_BIT_12);
-  adc1_config_channel_atten(ADC1_CHANNEL_0, ADC_ATTEN_DB_11);
+  // Configuration de la broche en entrée
+  gpio_set_direction(static_cast<gpio_num_t>(detect_pin), GPIO_MODE_INPUT);
   
-  // Lecture de la tension
-  int raw_value = adc1_get_raw(ADC1_CHANNEL_0);
-  float voltage = (raw_value / 4095.0f) * 3.3f;
+  // Lecture de l'état de la broche
+  bool detected = gpio_get_level(static_cast<gpio_num_t>(detect_pin)) == 1;
   
-  ESP_LOGD(TAG, "Tension VBUS mesurée: %.2fV", voltage);
+  ESP_LOGD(TAG, "État de détection USB: %s", detected ? "Détecté" : "Non détecté");
   
-  return voltage > vbus_threshold;
+  return detected;
 }
 
 void USBAudioComponent::apply_audio_output_() {
