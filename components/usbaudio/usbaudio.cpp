@@ -3,7 +3,6 @@
 #include "driver/gpio.h"
 
 #if defined(USE_ESP_IDF) && (defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32S3))
-#include "esp_private/usb_phy.h"
 #include "hal/usb_hal.h"
 #endif
 namespace esphome {
