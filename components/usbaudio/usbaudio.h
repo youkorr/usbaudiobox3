@@ -4,6 +4,10 @@
 #include "esphome/core/hal.h"
 #include "esphome/components/text_sensor/text_sensor.h"
 
+#if defined(USE_ESP_IDF) && (defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32S3))
+#include "usb/usb_host.h"
+#endif
+
 namespace esphome {
 namespace usbaudio {
 
@@ -25,6 +29,9 @@ class USBAudioComponent : public Component {
   bool is_usb_headset_connected() const { return usb_audio_connected_; }
   void set_text_sensor(text_sensor::TextSensor *text_sensor) { text_sensor_ = text_sensor; }
 
+  // Ajout de la fonction manquante
+  void handle_usb_connection_change(bool connected);
+
  protected:
   void handle_usb_audio_connection_();
   void apply_audio_output_();
@@ -34,8 +41,14 @@ class USBAudioComponent : public Component {
   AudioOutputMode audio_output_mode_{AudioOutputMode::AUTO_SELECT};
   bool usb_audio_connected_{false};
   text_sensor::TextSensor *text_sensor_{nullptr};
+
+#if defined(USE_ESP_IDF) && (defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32S3))
+ private:
+  usb_host_client_handle_t client_handle_;  // Déclaration manquante ajoutée ici
+#endif
 };
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
