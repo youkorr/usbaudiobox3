@@ -1,7 +1,8 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
-#include "USB.h"
-#include "USBH.h"
+
+#include "esp_log.h"
+#include "usb/usb_host.h"
 
 #include "esp_bt.h"
 #include "esp_bt_main.h"
