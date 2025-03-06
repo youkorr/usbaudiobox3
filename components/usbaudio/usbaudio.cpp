@@ -6,6 +6,22 @@ namespace usbaudio {
 
 static const char *const TAG = "usbaudio";
 
+// Add the missing method implementations
+void USBAudioComponent::set_audio_output_mode(AudioOutputMode mode) {
+  if (audio_output_mode_ != mode) {
+    audio_output_mode_ = mode;
+    apply_audio_output_();
+  }
+}
+
+void USBAudioComponent::set_audio_output_mode(int mode) {
+  AudioOutputMode new_mode = static_cast<AudioOutputMode>(mode);
+  if (new_mode != audio_output_mode_) {
+    audio_output_mode_ = new_mode;
+    apply_audio_output_();
+  }
+}
+
 bool USBAudioComponent::detect_usb_audio_device_() {
   // Placeholder implementation - replace with actual USB audio detection logic
   ESP_LOGD(TAG, "Simulating USB audio device detection");
