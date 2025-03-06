@@ -4,16 +4,12 @@
 #include "esphome/core/hal.h"
 #include "esphome/components/text_sensor/text_sensor.h"
 
-#if defined(USE_ESP_IDF) && (defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32S3))
-#include "usb/usb_host.h"
-#endif
-
 namespace esphome {
 namespace usbaudio {
 
 enum class AudioOutputMode {
   INTERNAL_SPEAKERS = 0,
-  USB_HEADSET = 1,
+  BLUETOOTH_OUTPUT = 1,
   AUTO_SELECT = 2
 };
 
@@ -26,29 +22,31 @@ class USBAudioComponent : public Component {
   void set_audio_output_mode(AudioOutputMode mode);
   void set_audio_output_mode(int mode);
   AudioOutputMode get_audio_output_mode() const { return audio_output_mode_; }
-  bool is_usb_headset_connected() const { return usb_audio_connected_; }
+  bool is_bluetooth_connected() const { return bt_connected_; }
   void set_text_sensor(text_sensor::TextSensor *text_sensor) { text_sensor_ = text_sensor; }
 
-  // Ajout de la fonction manquante
-  void handle_usb_connection_change(bool connected);
-
  protected:
-  void handle_usb_audio_connection_();
   void apply_audio_output_();
-  bool detect_usb_audio_device_();
-  void update_text_sensor();
+  void update_text_sensor_();
+  
+  // Bluetooth
+  bool detect_bluetooth_dongle_();
+  void initialize_bluetooth_a2dp_();
+  void start_bluetooth_pairing_();
+  static void bluetooth_a2dp_callback_(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param);
 
   AudioOutputMode audio_output_mode_{AudioOutputMode::AUTO_SELECT};
-  bool usb_audio_connected_{false};
+  AudioOutputMode active_output_mode_{AudioOutputMode::INTERNAL_SPEAKERS};
+  
+  bool bluetooth_dongle_connected_{false};
+  bool bt_initialized_{false};
+  bool bt_connected_{false};
+  
   text_sensor::TextSensor *text_sensor_{nullptr};
-
-#if defined(USE_ESP_IDF) && (defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32S3))
- private:
-  usb_host_client_handle_t client_handle_;  // Déclaration manquante ajoutée ici
-#endif
 };
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
 
