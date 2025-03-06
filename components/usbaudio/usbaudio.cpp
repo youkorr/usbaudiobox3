@@ -1,152 +1,106 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
+#include "USB.h"
+#include "USBH.h"
 
-// Inclusions nécessaires pour USB
-#include "esp_err.h"
-#include "esp_log.h"
-
-#if defined(USE_ESP_IDF) && (defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32S3))
-#include "usb/usb_host.h"
-#endif
+#include "esp_bt.h"
+#include "esp_bt_main.h"
+#include "esp_bt_device.h"
+#include "esp_a2dp_api.h"
+#include "esp_avrc_api.h"
+#include "esp_gap_bt_api.h"
 
 namespace esphome {
 namespace usbaudio {
 
 static const char *const TAG = "usbaudio";
 
-#if defined(USE_ESP_IDF) && (defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32S3))
-// Variable statique pour suivre l'état de connexion USB
-static bool s_usb_audio_connected = false;
-
-// Déclaration des fonctions de callback
-void client_event_callback(const usb_host_client_event_msg_t *event_msg, void *arg) {
-    USBAudioComponent *audio_comp = static_cast<USBAudioComponent*>(arg);
-    
-    switch (event_msg->event) {
-        case USB_HOST_CLIENT_EVENT_NEW_DEV:
-            ESP_LOGI(TAG, "Nouveau périphérique USB détecté");
-            // Ici, vous devriez idéalement vérifier si c'est un périphérique audio
-            s_usb_audio_connected = true;
-            if (audio_comp) {
-                audio_comp->handle_usb_connection_change(true);
-            }
-            break;
-            
-        case USB_HOST_CLIENT_EVENT_DEV_GONE:
-            ESP_LOGI(TAG, "Périphérique USB déconnecté");
-            s_usb_audio_connected = false;
-            if (audio_comp) {
-                audio_comp->handle_usb_connection_change(false);
-            }
-            break;
-            
-        default:
-            break;
-    }
-}
-#endif
-
-void USBAudioComponent::set_audio_output_mode(AudioOutputMode mode) {
-    if (audio_output_mode_ != mode) {
-        audio_output_mode_ = mode;
-        apply_audio_output_();
-    }
-}
-
-void USBAudioComponent::set_audio_output_mode(int mode) {
-    AudioOutputMode new_mode = static_cast<AudioOutputMode>(mode);
-    if (new_mode != audio_output_mode_) {
-        audio_output_mode_ = new_mode;
-        apply_audio_output_();
-    }
-}
-
-void USBAudioComponent::handle_usb_connection_change(bool connected) {
-    if (usb_audio_connected_ != connected) {
-        usb_audio_connected_ = connected;
-        apply_audio_output_();
-        update_text_sensor();
-    }
-}
-
-void USBAudioComponent::apply_audio_output_() {
-    AudioOutputMode effective_mode = audio_output_mode_;
-    if (effective_mode == AudioOutputMode::AUTO_SELECT) {
-        effective_mode = usb_audio_connected_ ? AudioOutputMode::USB_HEADSET
-                                             : AudioOutputMode::INTERNAL_SPEAKERS;
-    }
-    
-    switch (effective_mode) {
-        case AudioOutputMode::INTERNAL_SPEAKERS:
-            ESP_LOGD(TAG, "Activation des haut-parleurs internes");
-            // Ajoutez ici le code pour basculer vers les haut-parleurs internes
-            break;
-            
-        case AudioOutputMode::USB_HEADSET:
-            ESP_LOGD(TAG, "Activation du casque USB");
-            // Ajoutez ici le code pour basculer vers le casque USB
-            break;
-            
-        default:
-            ESP_LOGE(TAG, "Mode audio inconnu");
-            break;
-    }
-}
+static const uint8_t USB_CLASS_WIRELESS = 0xE0;
+static const uint8_t USB_SUBCLASS_BLUETOOTH = 0x01;
 
 void USBAudioComponent::setup() {
-    ESP_LOGD(TAG, "Initialisation du composant USB Audio");
-    
-#if defined(USE_ESP_IDF) && (defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32S3))
-    // Configuration et initialisation du Host USB
-    usb_host_config_t host_config = {
-        .skip_phy_setup = false,
-        .intr_flags = ESP_INTR_FLAG_LEVEL1,
-    };
-    
-    ESP_ERROR_CHECK(usb_host_install(&host_config));
-    
-    // Démarrer la tâche client USB
-    usb_host_client_config_t client_config = {
-        .is_synchronous = false,
-        .max_num_event_msg = 5,
-        .async = {
-            .client_event_callback = client_event_callback,
-            .callback_arg = this,
-        }
-    };
-    
-    ESP_ERROR_CHECK(usb_host_client_register(&client_config, &client_handle_));
-#else
-    // Simuler une connexion pour les plateformes sans support USB
-    usb_audio_connected_ = false;
-#endif
-    
-    // Appliquer la configuration initiale
+    ESP_LOGD(TAG, "Configuration du composant Audio Bluetooth");
+
+    if (USB.begin()) {
+        ESP_LOGI(TAG, "USB Host initialisé avec succès");
+    } else {
+        ESP_LOGE(TAG, "Échec de l'initialisation de USB Host");
+    }
+
+    bluetooth_dongle_connected_ = detect_bluetooth_dongle_();
+
+    if (bluetooth_dongle_connected_) {
+        ESP_LOGI(TAG, "Initialisation du Bluetooth A2DP");
+        initialize_bluetooth_a2dp_();
+    }
     apply_audio_output_();
 }
 
-void USBAudioComponent::loop() {
-#if defined(USE_ESP_IDF) && (defined(CONFIG_IDF_TARGET_ESP32S2) || defined(CONFIG_IDF_TARGET_ESP32S3))
-    // Les événements sont gérés par le callback
-#else
-    // Pour les plateformes sans support USB, rien à faire ici
-#endif
+bool USBAudioComponent::detect_bluetooth_dongle_() {
+    ESP_LOGD(TAG, "Vérification du dongle Bluetooth USB");
+    if (USB.connected()) {
+        uint8_t dev_count = USBH.getDeviceCount();
+        for (uint8_t i = 0; i < dev_count; i++) {
+            uint8_t dev_addr = USBH.getAddress(i);
+            if (USBH.getDeviceClass(dev_addr) == USB_CLASS_WIRELESS &&
+                USBH.getDeviceSubClass(dev_addr) == USB_SUBCLASS_BLUETOOTH) {
+                ESP_LOGI(TAG, "Dongle Bluetooth USB détecté");
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
-void USBAudioComponent::dump_config() {
-    ESP_LOGCONFIG(TAG, "USB Audio:");
-    ESP_LOGCONFIG(TAG, "  Mode: %d", static_cast<int>(audio_output_mode_));
-    ESP_LOGCONFIG(TAG, "  Casque USB connecté: %s", usb_audio_connected_ ? "OUI" : "NON");
+void USBAudioComponent::initialize_bluetooth_a2dp_() {
+    esp_err_t ret;
+    esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
+    if ((ret = esp_bt_controller_init(&bt_cfg)) != ESP_OK) {
+        ESP_LOGE(TAG, "Erreur init BT: %s", esp_err_to_name(ret));
+        return;
+    }
+    if ((ret = esp_bt_controller_enable(ESP_BT_MODE_CLASSIC_BT)) != ESP_OK) {
+        ESP_LOGE(TAG, "Erreur enable BT: %s", esp_err_to_name(ret));
+        return;
+    }
+    if ((ret = esp_bluedroid_init()) != ESP_OK) {
+        ESP_LOGE(TAG, "Erreur init Bluedroid: %s", esp_err_to_name(ret));
+        return;
+    }
+    if ((ret = esp_bluedroid_enable()) != ESP_OK) {
+        ESP_LOGE(TAG, "Erreur enable Bluedroid: %s", esp_err_to_name(ret));
+        return;
+    }
+
+    esp_a2d_register_callback(bluetooth_a2dp_callback_);
+    esp_a2d_source_init();
+    esp_bt_dev_set_device_name("ESP32-S3-BOX-AUDIO");
+    esp_bt_gap_set_scan_mode(ESP_BT_CONNECTABLE, ESP_BT_GENERAL_DISCOVERABLE);
 }
 
-void USBAudioComponent::update_text_sensor() {
-    if (text_sensor_ != nullptr) {
-        text_sensor_->publish_state(usb_audio_connected_ ? "Connecté" : "Déconnecté");
+void USBAudioComponent::apply_audio_output_() {
+    if (bluetooth_dongle_connected_ && bt_connected_) {
+        ESP_LOGI(TAG, "Utilisation du Bluetooth");
+    } else {
+        ESP_LOGI(TAG, "Utilisation des haut-parleurs internes");
+    }
+}
+
+void USBAudioComponent::start_bluetooth_pairing_() {
+    ESP_LOGI(TAG, "Mode appairage activé");
+    esp_bt_gap_start_discovery(ESP_BT_INQ_MODE_GENERAL_INQUIRY, 10, 0);
+}
+
+void USBAudioComponent::bluetooth_a2dp_callback_(esp_a2d_cb_event_t event, esp_a2d_cb_param_t *param) {
+    if (event == ESP_A2D_CONNECTION_STATE_EVT) {
+        bt_connected_ = (param->conn_stat.state == ESP_A2D_CONNECTION_STATE_CONNECTED);
+        ESP_LOGI(TAG, "État A2DP: %s", bt_connected_ ? "Connecté" : "Déconnecté");
     }
 }
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
 
 
