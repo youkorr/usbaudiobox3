@@ -1,6 +1,7 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
 #include "driver/gpio.h"
+#include "usb/uac_host.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -20,15 +21,7 @@ void USBAudioComponent::set_audio_output_mode(int mode) {
     audio_output_mode_ = new_mode;
     apply_audio_output_();
   }
-}
 
-// ✅ Détection VBUS via GPIO19
-bool USBAudioComponent::detect_usb_audio_device_() {
-  gpio_set_direction(GPIO_NUM_19, GPIO_MODE_INPUT);
-  bool vbus_present = gpio_get_level(GPIO_NUM_19);
-
-  ESP_LOGD(TAG, "Détection USB VBUS (GPIO19) : %s", vbus_present ? "Présent" : "Absent");
-  return vbus_present;
 }
 
 void USBAudioComponent::apply_audio_output_() {
