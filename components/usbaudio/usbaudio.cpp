@@ -1,4 +1,3 @@
-
 #include "usbaudio.h"
 #include "esphome/core/log.h"
 #include "driver/usb_serial_jtag.h"
@@ -25,6 +24,5 @@ bool USBAudioComponent::detect_usb_audio_device_() {
 void USBAudioComponent::apply_audio_output_() {
   AudioOutputMode effective_mode = audio_output_mode_;
   if (effective
-
 
 
