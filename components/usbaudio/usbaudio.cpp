@@ -1,6 +1,6 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
-#include "driver/usb_serial_jtag.h"
+#include "tusb.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -23,18 +23,9 @@ void USBAudioComponent::set_audio_output_mode(int mode) {
 }
 
 bool USBAudioComponent::detect_usb_audio_device_() {
-  // Détection basée sur l'état de l'USB
-  usb_serial_jtag_driver_config_t config;
-  esp_err_t err = usb_serial_jtag_driver_install(&config);
-  
-  if (err != ESP_OK) {
-    ESP_LOGD(TAG, "Erreur d'initialisation USB: %s", esp_err_to_name(err));
-    return false;
-  }
-  
-  bool detected = usb_serial_jtag_is_connected();
+  // Vérification si un périphérique audio USB est connecté
+  bool detected = tud_audio_n_ready(0); // TinyUSB Audio Interface
   ESP_LOGD(TAG, "État de détection USB: %s", detected ? "Détecté" : "Non détecté");
-  
   return detected;
 }
 
@@ -43,17 +34,17 @@ void USBAudioComponent::apply_audio_output_() {
   
   if (effective_mode == AudioOutputMode::AUTO_SELECT) {
     effective_mode = usb_audio_connected_ ? AudioOutputMode::USB_HEADSET 
-                                         : AudioOutputMode::INTERNAL_SPEAKERS;
+                                          : AudioOutputMode::INTERNAL_SPEAKERS;
   }
 
   switch (effective_mode) {
     case AudioOutputMode::INTERNAL_SPEAKERS:
       ESP_LOGD(TAG, "Activation des haut-parleurs internes");
-      // Logique pour les haut-parleurs internes
+      // Ajouter la logique pour les haut-parleurs internes
       break;
     case AudioOutputMode::USB_HEADSET:
       ESP_LOGD(TAG, "Activation du casque USB");
-      // Logique pour le casque USB
+      // Ajouter la logique pour rediriger l'audio vers USB
       break;
     default:
       ESP_LOGE(TAG, "Mode audio inconnu");
@@ -71,7 +62,6 @@ void USBAudioComponent::loop() {
   static uint32_t last_check = 0;
   uint32_t now = millis();
   
-  // Vérification périodique toutes les 500ms
   if (now - last_check > 500) {
     last_check = now;
     bool current_state = detect_usb_audio_device_();
@@ -86,8 +76,7 @@ void USBAudioComponent::loop() {
 void USBAudioComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "USB Audio:");
   ESP_LOGCONFIG(TAG, "  Mode: %d", static_cast<int>(audio_output_mode_));
-  ESP_LOGCONFIG(TAG, "  Casque USB connecté: %s", 
-               usb_audio_connected_ ? "OUI" : "NON");
+  ESP_LOGCONFIG(TAG, "  Casque USB connecté: %s", usb_audio_connected_ ? "OUI" : "NON");
 }
 
 void USBAudioComponent::update_text_sensor() {
@@ -98,5 +87,6 @@ void USBAudioComponent::update_text_sensor() {
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
 
