@@ -1,6 +1,6 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
-#include "tusb.h"
+#include "driver/usb_device.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -23,17 +23,26 @@ void USBAudioComponent::set_audio_output_mode(int mode) {
 }
 
 bool USBAudioComponent::detect_usb_audio_device_() {
-  // Vérification si un périphérique audio USB est connecté
-  bool detected = tud_audio_n_ready(0); // TinyUSB Audio Interface
+  // Vérification si un périphérique USB est connecté via le port USB natif
+  usb_device_status_t usb_status;
+  esp_err_t err = usb_device_get_status(&usb_status);
+
+  if (err != ESP_OK) {
+    ESP_LOGD(TAG, "Erreur de détection USB: %s", esp_err_to_name(err));
+    return false;
+  }
+
+  bool detected = (usb_status == USB_DEVICE_STATUS_POWERED) || (usb_status == USB_DEVICE_STATUS_CONFIGURED);
   ESP_LOGD(TAG, "État de détection USB: %s", detected ? "Détecté" : "Non détecté");
+
   return detected;
 }
 
 void USBAudioComponent::apply_audio_output_() {
   AudioOutputMode effective_mode = audio_output_mode_;
-  
+
   if (effective_mode == AudioOutputMode::AUTO_SELECT) {
-    effective_mode = usb_audio_connected_ ? AudioOutputMode::USB_HEADSET 
+    effective_mode = usb_audio_connected_ ? AudioOutputMode::USB_HEADSET
                                           : AudioOutputMode::INTERNAL_SPEAKERS;
   }
 
@@ -61,7 +70,7 @@ void USBAudioComponent::setup() {
 void USBAudioComponent::loop() {
   static uint32_t last_check = 0;
   uint32_t now = millis();
-  
+
   if (now - last_check > 500) {
     last_check = now;
     bool current_state = detect_usb_audio_device_();
@@ -87,6 +96,7 @@ void USBAudioComponent::update_text_sensor() {
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
 
 
