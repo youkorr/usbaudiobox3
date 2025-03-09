@@ -63,79 +63,90 @@ bool USBAudioComponent::detect_usb_audio_device_() {
   }
 
   bool audio_device_present = false;
-  uint8_t device_count;
-  esp_err_t err = usb_host_get_device_list(client_hdl, &device_count);
+  usb_device_handle_t dev_hdl = nullptr;
+  esp_err_t err;
+
+  const uint16_t expected_vendor_id = 0x1234; // Remplacer par le Vendor ID de votre appareil
+  const uint16_t expected_product_id = 0x5678; // Remplacer par le Product ID de votre appareil
+
+  // Tentative d'ouverture du périphérique plusieurs fois
+  for (int attempt = 0; attempt < 3; ++attempt) {
+    ESP_LOGD(TAG, "Tentative de détection USB audio, essai %d", attempt + 1);
+    err = usb_host_device_open(client_hdl, 1, &dev_hdl); // Essayer l'adresse 1
+    if (err == ESP_OK) {
+      break; // Périphérique ouvert avec succès
+    } else {
+      ESP_LOGW(TAG, "Erreur lors de l'ouverture du périphérique USB (essai %d): %s", attempt + 1, esp_err_to_name(err));
+      vTaskDelay(pdMS_TO_TICKS(500)); // Attendre avant de réessayer
+    }
+  }
+
   if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur lors de l'obtention de la liste des périphériques: %s", esp_err_to_name(err));
+    ESP_LOGD(TAG, "Aucun périphérique USB détecté après plusieurs tentatives");
     return false;
   }
 
-  ESP_LOGD(TAG, "Nombre de périphériques USB connectés: %d", device_count);
-
-  usb_device_handle_t dev_hdl = nullptr; // Initialiser à nullptr
-  for (int i = 1; i <= device_count; i++) { // Les adresses commencent à 1
-    ESP_LOGD(TAG, "Tentative d'ouverture du périphérique USB à l'adresse: %d", i);
-    err = usb_host_device_open(client_hdl, i, &dev_hdl);
-    if (err != ESP_OK) {
-      ESP_LOGW(TAG, "Erreur lors de l'ouverture du périphérique USB à l'adresse %d: %s", i, esp_err_to_name(err));
-      continue; // Essayer le périphérique suivant
-    }
-
-    // Obtenir le descripteur du périphérique
-    const usb_device_desc_t *dev_desc;
-    err = usb_host_get_device_descriptor(dev_hdl, &dev_desc);
-    if (err != ESP_OK) {
-      ESP_LOGW(TAG, "Erreur lors de l'obtention du descripteur à l'adresse %d: %s", i, esp_err_to_name(err));
-      usb_host_device_close(client_hdl, dev_hdl);
-      continue;
-    }
-
-    // Vérifier d'abord si c'est directement un périphérique audio
-    if (dev_desc->bDeviceClass == 0x01) {
-      audio_device_present = true;
-      ESP_LOGD(TAG, "Périphérique USB Audio détecté (classe 0x01) à l'adresse %d", i);
-    } else {
-      // Parcourir les configurations pour vérifier les interfaces audio
-      const usb_config_desc_t *config_desc = nullptr;
-        if (usb_host_get_active_config_descriptor(dev_hdl, &config_desc) == ESP_OK) {
-            ESP_LOGD(TAG, "Active configuration descriptor obtained");
-            uint8_t curr_idx = 0;
-            const uint8_t *ptr = config_desc->val;
-
-            while (curr_idx < config_desc->wTotalLength) {
-                uint8_t desc_len = ptr[curr_idx];
-                uint8_t desc_type = ptr[curr_idx + 1];
-
-                if (desc_type == USB_DESCRIPTOR_TYPE_INTERFACE && desc_len >= 9) {
-                    uint8_t intf_class = ptr[curr_idx + 5];
-                    uint8_t intf_subclass = ptr[curr_idx + 6];
-                    uint8_t intf_protocol = ptr[curr_idx + 7];
-                    ESP_LOGD(TAG, "Interface descriptor found: Class=0x%02X, SubClass=0x%02X, Protocol=0x%02X", intf_class, intf_subclass, intf_protocol);
-
-                    if (intf_class == USB_CLASS_AUDIO) {
-                        ESP_LOGI(TAG, "Audio interface detected (Class: 0x%02X) à l'adresse %d", USB_CLASS_AUDIO, i);
-                        audio_device_present = true;
-                        break;
-                    }
-                }
-
-                curr_idx += desc_len;
-                if (desc_len == 0) {
-                  ESP_LOGE(TAG, "Invalid descriptor length, exiting loop");
-                  break;
-                }
-            }
-        } else {
-            ESP_LOGW(TAG, "Failed to get active config descriptor");
-        }
-      }
-
+  // Obtenir le descripteur du périphérique
+  const usb_device_desc_t *dev_desc;
+  err = usb_host_get_device_descriptor(dev_hdl, &dev_desc);
+  if (err != ESP_OK) {
+    ESP_LOGW(TAG, "Erreur lors de l'obtention du descripteur: %s", esp_err_to_name(err));
     usb_host_device_close(client_hdl, dev_hdl);
-    if (audio_device_present) break; // Pas besoin de vérifier d'autres périphériques
+    return false;
   }
 
+    // Vérifier le Vendor ID et le Product ID
+    if (dev_desc->idVendor != expected_vendor_id || dev_desc->idProduct != expected_product_id) {
+        ESP_LOGW(TAG, "Périphérique USB trouvé, mais Vendor ID ou Product ID incorrect.");
+        usb_host_device_close(client_hdl, dev_hdl);
+        return false;
+    }
+
+  // Vérifier d'abord si c'est directement un périphérique audio
+  if (dev_desc->bDeviceClass == 0x01) {
+    audio_device_present = true;
+    ESP_LOGD(TAG, "Périphérique USB Audio détecté (classe 0x01)");
+  } else {
+    // Parcourir les configurations pour vérifier les interfaces audio
+    const usb_config_desc_t *config_desc = nullptr;
+    if (usb_host_get_active_config_descriptor(dev_hdl, &config_desc) == ESP_OK) {
+      ESP_LOGD(TAG, "Descripteur de configuration active obtenu");
+      uint8_t curr_idx = 0;
+      const uint8_t *ptr = config_desc->val;
+
+      while (curr_idx < config_desc->wTotalLength) {
+        uint8_t desc_len = ptr[curr_idx];
+        uint8_t desc_type = ptr[curr_idx + 1];
+
+        if (desc_type == USB_DESCRIPTOR_TYPE_INTERFACE && desc_len >= 9) {
+          uint8_t intf_class = ptr[curr_idx + 5];
+          uint8_t intf_subclass = ptr[curr_idx + 6];
+          uint8_t intf_protocol = ptr[curr_idx + 7];
+          ESP_LOGD(TAG, "Descripteur d'interface trouvé: Class=0x%02X, SubClass=0x%02X, Protocol=0x%02X", intf_class, intf_subclass, intf_protocol);
+
+          if (intf_class == USB_CLASS_AUDIO) {
+            ESP_LOGI(TAG, "Interface audio détectée (Class: 0x%02X)", USB_CLASS_AUDIO);
+            audio_device_present = true;
+            break;
+          }
+        }
+
+        curr_idx += desc_len;
+        if (desc_len == 0) {
+          ESP_LOGE(TAG, "Longueur de descripteur invalide, sortie de la boucle");
+          break;
+        }
+      }
+    } else {
+      ESP_LOGW(TAG, "Impossible d'obtenir le descripteur de configuration active");
+    }
+  }
+
+  // Libérer les ressources
+  usb_host_device_close(client_hdl, dev_hdl);
+
   if (!audio_device_present) {
-    ESP_LOGD(TAG, "Aucun périphérique audio USB détecté");
+    ESP_LOGD(TAG, "Périphérique USB détecté, mais ce n'est pas un périphérique audio");
   }
 
   return audio_device_present;
@@ -296,6 +307,7 @@ void USBAudioComponent::update_text_sensor() {
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
 
 
