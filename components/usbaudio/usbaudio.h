@@ -3,7 +3,6 @@
 #include "esphome/core/component.h"
 #include "esphome/core/hal.h"
 #include "esphome/components/text_sensor/text_sensor.h"
-#include "usb/usb_host.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -28,7 +27,7 @@ class USBAudioComponent : public Component {
 
  protected:
   void apply_audio_output_();
-  bool detect_usb_audio_device_();
+  bool detect_headphone_();
   void update_text_sensor();
 
   AudioOutputMode audio_output_mode_{AudioOutputMode::AUTO_SELECT};
