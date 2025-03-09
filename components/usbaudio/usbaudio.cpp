@@ -11,6 +11,10 @@ static const char *const TAG = "usbaudio";
 static usb_host_client_handle_t client_hdl = nullptr;
 static bool usb_host_initialized = false;
 
+// Identifiants spécifiques de l'adaptateur USB vers 3,5 mm
+const uint16_t USB_ADAPTER_VENDOR_ID = 0x1234;  // Remplacez par le Vendor ID réel
+const uint16_t USB_ADAPTER_PRODUCT_ID = 0x5678; // Remplacez par le Product ID réel
+
 void USBAudioComponent::set_audio_output_mode(AudioOutputMode mode) {
   if (audio_output_mode_ != mode) {
     audio_output_mode_ = mode;
@@ -33,11 +37,18 @@ bool USBAudioComponent::detect_usb_audio_device_() {
 
   bool device_present = false;
   usb_device_handle_t dev_hdl;
+  usb_device_info_t dev_info;
   
   // Obtenir le handle du premier périphérique connecté
   if (usb_host_device_open(client_hdl, 0, &dev_hdl) == ESP_OK) {
-    device_present = true;
-    ESP_LOGD(TAG, "Périphérique USB détecté");
+    if (usb_host_device_info(dev_hdl, &dev_info) == ESP_OK) {
+      // Vérifier si c'est l'adaptateur spécifique
+      if (dev_info.idVendor == USB_ADAPTER_VENDOR_ID &&
+          dev_info.idProduct == USB_ADAPTER_PRODUCT_ID) {
+        device_present = true;
+        ESP_LOGD(TAG, "Adaptateur USB vers 3,5 mm détecté");
+      }
+    }
     usb_host_device_close(client_hdl, dev_hdl);
   }
 
@@ -111,7 +122,7 @@ void USBAudioComponent::loop() {
 void USBAudioComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "USB Audio:");
   ESP_LOGCONFIG(TAG, "  Mode: %d", static_cast<int>(audio_output_mode_));
-  ESP_LOGCONFIG(TAG, "  Casque USB connecté: %s", usb_audio_connected_ ? "OUI" : "NON");
+  ESP_LOGCONFIG(TAG, "  Adaptateur USB connecté: %s", usb_audio_connected_ ? "OUI" : "NON");
 }
 
 void USBAudioComponent::update_text_sensor() {
