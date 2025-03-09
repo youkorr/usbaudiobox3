@@ -17,7 +17,7 @@ static bool usb_host_initialized = false;
 
 // Configuration pour le GPIO du haut-parleur interne
 #ifdef USE_ESP32S3_BOX_3
-static const int INTERNAL_SPEAKER_ENABLE_GPIO = 38; // Remplacez par le GPIO correct
+static const int INTERNAL_SPEAKER_ENABLE_GPIO = 46; // Remplacez par le GPIO correct
 #endif
 
 // Définitions pour les descripteurs USB
