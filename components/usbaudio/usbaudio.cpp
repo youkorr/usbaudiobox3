@@ -1,7 +1,6 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
 #include "usb/usb_host.h"
-#include "usb/uac_host.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -10,8 +9,11 @@ static const char *const TAG = "usbaudio";
 
 // Variables globales pour le client USB Host
 static usb_host_client_handle_t client_hdl = nullptr;
-static uac_host_device_handle_t uac_hdl = nullptr;
 static bool usb_host_initialized = false;
+
+// Identifiants de classe USB Audio
+const uint8_t USB_CLASS_AUDIO = 0x01;
+const uint8_t USB_SUBCLASS_AUDIOCONTROL = 0x01;
 
 void USBAudioComponent::set_audio_output_mode(AudioOutputMode mode) {
   if (audio_output_mode_ != mode) {
@@ -35,13 +37,17 @@ bool USBAudioComponent::detect_usb_audio_device_() {
 
   bool device_present = false;
   usb_device_handle_t dev_hdl;
+  usb_device_info_t dev_info;
   
   // Obtenir le handle du premier périphérique connecté
   if (usb_host_device_open(client_hdl, 0, &dev_hdl) == ESP_OK) {
-    // Vérifier si c'est un périphérique audio UAC
-    if (uac_host_device_init(dev_hdl, &uac_hdl) == ESP_OK) {
-      device_present = true;
-      ESP_LOGD(TAG, "Périphérique audio UAC détecté");
+    if (usb_host_device_info(dev_hdl, &dev_info) == ESP_OK) {
+      // Vérifier si c'est un périphérique audio
+      if (dev_info.bDeviceClass == USB_CLASS_AUDIO ||
+          dev_info.bDeviceSubClass == USB_SUBCLASS_AUDIOCONTROL) {
+        device_present = true;
+        ESP_LOGD(TAG, "Périphérique audio USB détecté");
+      }
     }
     usb_host_device_close(client_hdl, dev_hdl);
   }
@@ -55,16 +61,9 @@ void USBAudioComponent::apply_audio_output_() {
     switch (audio_output_mode_) {
       case AudioOutputMode::INTERNAL_SPEAKERS:
         ESP_LOGD(TAG, "Activation forcée des haut-parleurs internes");
-        if (uac_hdl) {
-          uac_host_device_deinit(uac_hdl);
-          uac_hdl = nullptr;
-        }
         break;
       case AudioOutputMode::USB_HEADSET:
         ESP_LOGD(TAG, "Activation forcée du casque USB");
-        if (!uac_hdl) {
-          detect_usb_audio_device_();
-        }
         break;
       default:
         break;
@@ -75,15 +74,8 @@ void USBAudioComponent::apply_audio_output_() {
   // Mode automatique
   if (usb_audio_connected_) {
     ESP_LOGD(TAG, "Basculement vers le casque USB (mode automatique)");
-    if (!uac_hdl) {
-      detect_usb_audio_device_();
-    }
   } else {
     ESP_LOGD(TAG, "Basculement vers les haut-parleurs internes (mode automatique)");
-    if (uac_hdl) {
-      uac_host_device_deinit(uac_hdl);
-      uac_hdl = nullptr;
-    }
   }
 }
 
