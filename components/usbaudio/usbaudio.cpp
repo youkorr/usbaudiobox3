@@ -1,6 +1,6 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
-#include "driver/gpio.h"
+#include "usb/usb_host.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -22,13 +22,31 @@ void USBAudioComponent::set_audio_output_mode(int mode) {
   }
 }
 
-// ✅ Détection VBUS via GPIO19
 bool USBAudioComponent::detect_usb_audio_device_() {
-  gpio_set_direction(GPIO_NUM_19, GPIO_MODE_INPUT);
-  bool vbus_present = gpio_get_level(GPIO_NUM_19);
+  // Utilisation de usb_host_uac pour la détection
+  usb_host_client_handle_t client_hdl;
+  usb_host_client_config_t client_config = {
+      .is_synchronous = false,
+      .max_num_event_msg = 5,
+      .async = {
+          .client_event_callback = nullptr,
+          .callback_arg = nullptr,
+      }};
+  
+  esp_err_t err = usb_host_client_register(&client_config, &client_hdl);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Erreur d'initialisation USB Host: %s", esp_err_to_name(err));
+    return false;
+  }
 
-  ESP_LOGD(TAG, "Détection USB VBUS (GPIO19) : %s", vbus_present ? "Présent" : "Absent");
-  return vbus_present;
+  bool device_present = false;
+  usb_device_info_t dev_info;
+  if (usb_host_device_info(client_hdl, 0, &dev_info) == ESP_OK) {
+    device_present = true;
+  }
+
+  usb_host_client_deregister(client_hdl);
+  return device_present;
 }
 
 void USBAudioComponent::apply_audio_output_() {
