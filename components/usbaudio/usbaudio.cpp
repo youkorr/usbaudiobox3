@@ -1,6 +1,7 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
 #include "usb/usb_host.h"
+#include "esp_timer.h" // Include for esp_timer_get_time()
 
 namespace esphome {
 namespace usbaudio {
@@ -102,7 +103,7 @@ bool USBAudioComponent::detect_usb_audio_device_() {
         }
         
         // Libérer le descripteur de configuration
-        usb_host_release_config_descriptor(dev_hdl, config_desc);
+        // usb_host_release_config_descriptor(dev_hdl, config_desc); // Removed line
       }
     }
   }
@@ -221,7 +222,7 @@ void USBAudioComponent::loop() {
   
   // On continue de vérifier périodiquement au cas où les événements ne seraient pas détectés
   static uint32_t last_check = 0;
-  uint32_t now = millis();
+  uint32_t now = esp_timer_get_time() / 1000; // Replace millis() with esp_timer_get_time()
   if (now - last_check > 2000) {  // Vérification toutes les 2 secondes
     last_check = now;
     bool current_state = detect_usb_audio_device_();
@@ -249,6 +250,7 @@ void USBAudioComponent::update_text_sensor() {
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
 
 
