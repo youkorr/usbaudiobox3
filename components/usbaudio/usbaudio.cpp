@@ -23,7 +23,6 @@ void USBAudioComponent::set_audio_output_mode(int mode) {
 }
 
 bool USBAudioComponent::detect_usb_audio_device_() {
-  // Utilisation de usb_host_uac pour la détection
   usb_host_client_handle_t client_hdl;
   usb_host_client_config_t client_config = {
       .is_synchronous = false,
@@ -40,9 +39,15 @@ bool USBAudioComponent::detect_usb_audio_device_() {
   }
 
   bool device_present = false;
+  usb_device_handle_t dev_hdl;
   usb_device_info_t dev_info;
-  if (usb_host_device_info(client_hdl, 0, &dev_info) == ESP_OK) {
-    device_present = true;
+  
+  // Obtenir le handle du premier périphérique connecté
+  if (usb_host_device_open(client_hdl, 0, &dev_hdl) == ESP_OK) {
+    if (usb_host_device_info(dev_hdl, &dev_info) == ESP_OK) {
+      device_present = true;
+    }
+    usb_host_device_close(client_hdl, dev_hdl);
   }
 
   usb_host_client_deregister(client_hdl);
