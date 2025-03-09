@@ -15,7 +15,7 @@ enum class AudioOutputMode {
 class USBAudioComponent : public Component {
  public:
   void set_audio_output_mode(AudioOutputMode mode);
-  void set_audio_output_mode(int mode); // For automations using integers
+  void set_audio_output_mode(int mode); // Pour les automations utilisant des entiers
 
   void set_text_sensor(esphome::text_sensor::TextSensor *text_sensor) { text_sensor_ = text_sensor; }
 
@@ -39,6 +39,7 @@ class USBAudioComponent : public Component {
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
 
 
