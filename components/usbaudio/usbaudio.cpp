@@ -1,19 +1,14 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
-#include "usb/usb_host.h"
+#include "esphome/core/hal.h"
 
 namespace esphome {
 namespace usbaudio {
 
 static const char *const TAG = "usbaudio";
 
-// Variables globales pour le client USB Host
-static usb_host_client_handle_t client_hdl = nullptr;
-static bool usb_host_initialized = false;
-
-// Identifiants spécifiques de l'adaptateur USB vers 3,5 mm
-const uint16_t USB_ADAPTER_VENDOR_ID = 0x1234;  // Remplacez par le Vendor ID réel
-const uint16_t USB_ADAPTER_PRODUCT_ID = 0x5678; // Remplacez par le Product ID réel
+// GPIO pour la détection du casque
+const int HEADPHONE_DETECT_PIN = HEADPHONE_DETECT;  // Utilise la constante HEADPHONE_DETECT
 
 void USBAudioComponent::set_audio_output_mode(AudioOutputMode mode) {
   if (audio_output_mode_ != mode) {
@@ -30,29 +25,16 @@ void USBAudioComponent::set_audio_output_mode(int mode) {
   }
 }
 
-bool USBAudioComponent::detect_usb_audio_device_() {
-  if (!usb_host_initialized) {
+bool USBAudioComponent::detect_headphone_() {
+  if (HEADPHONE_DETECT_PIN == -1) {
+    ESP_LOGE(TAG, "Aucun GPIO configuré pour la détection du casque");
     return false;
   }
 
-  bool device_present = false;
-  usb_device_handle_t dev_hdl;
-  usb_device_info_t dev_info;
-  
-  // Obtenir le handle du premier périphérique connecté
-  if (usb_host_device_open(client_hdl, 0, &dev_hdl) == ESP_OK) {
-    if (usb_host_device_info(dev_hdl, &dev_info) == ESP_OK) {
-      // Vérifier si c'est l'adaptateur spécifique
-      if (dev_info.idVendor == USB_ADAPTER_VENDOR_ID &&
-          dev_info.idProduct == USB_ADAPTER_PRODUCT_ID) {
-        device_present = true;
-        ESP_LOGD(TAG, "Adaptateur USB vers 3,5 mm détecté");
-      }
-    }
-    usb_host_device_close(client_hdl, dev_hdl);
-  }
-
-  return device_present;
+  // Lire l'état du GPIO
+  bool headphone_connected = digitalRead(HEADPHONE_DETECT_PIN) == HIGH;
+  ESP_LOGD(TAG, "État du casque : %s", headphone_connected ? "Connecté" : "Déconnecté");
+  return headphone_connected;
 }
 
 void USBAudioComponent::apply_audio_output_() {
@@ -82,25 +64,16 @@ void USBAudioComponent::apply_audio_output_() {
 void USBAudioComponent::setup() {
   ESP_LOGD(TAG, "Initialisation du composant USB Audio");
 
-  // Initialisation du client USB Host
-  usb_host_client_config_t client_config = {
-      .is_synchronous = false,
-      .max_num_event_msg = 5,
-      .async = {
-          .client_event_callback = nullptr,
-          .callback_arg = nullptr,
-      }};
-  
-  esp_err_t err = usb_host_client_register(&client_config, &client_hdl);
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur d'initialisation USB Host: %s", esp_err_to_name(err));
-    usb_host_initialized = false;
+  // Configurer le GPIO pour la détection du casque
+  if (HEADPHONE_DETECT_PIN != -1) {
+    pinMode(HEADPHONE_DETECT_PIN, INPUT);
+    ESP_LOGD(TAG, "GPIO %d configuré pour la détection du casque", HEADPHONE_DETECT_PIN);
   } else {
-    usb_host_initialized = true;
+    ESP_LOGE(TAG, "Aucun GPIO configuré pour la détection du casque");
   }
 
   // Détection initiale
-  usb_audio_connected_ = detect_usb_audio_device_();
+  usb_audio_connected_ = detect_headphone_();
   apply_audio_output_();
 }
 
@@ -110,7 +83,7 @@ void USBAudioComponent::loop() {
 
   if (now - last_check > 500) {
     last_check = now;
-    bool current_state = detect_usb_audio_device_();
+    bool current_state = detect_headphone_();
     if (current_state != usb_audio_connected_) {
       usb_audio_connected_ = current_state;
       apply_audio_output_();
@@ -122,7 +95,7 @@ void USBAudioComponent::loop() {
 void USBAudioComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "USB Audio:");
   ESP_LOGCONFIG(TAG, "  Mode: %d", static_cast<int>(audio_output_mode_));
-  ESP_LOGCONFIG(TAG, "  Adaptateur USB connecté: %s", usb_audio_connected_ ? "OUI" : "NON");
+  ESP_LOGCONFIG(TAG, "  Casque connecté: %s", usb_audio_connected_ ? "OUI" : "NON");
 }
 
 void USBAudioComponent::update_text_sensor() {
