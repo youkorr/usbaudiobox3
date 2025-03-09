@@ -7,6 +7,10 @@
 namespace esphome {
 namespace usbaudio {
 
+// Déclaration des fonctions GPIO
+int8_t get_headphone_detect_gpio();
+int8_t get_pa_enable_gpio();
+
 enum class AudioOutputMode {
   INTERNAL_SPEAKERS = 0,
   USB_HEADSET = 1,
