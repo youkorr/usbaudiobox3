@@ -7,37 +7,36 @@ namespace esphome {
 namespace usbaudio {
 
 enum class AudioOutputMode {
-  AUTO_SELECT = 0,
-  INTERNAL_SPEAKERS = 1,
-  USB_HEADSET = 2,
+  AUTO_SELECT,
+  INTERNAL_SPEAKERS,
+  USB_HEADSET
 };
 
-class USBAudioComponent : public Component {
+class USBAudioComponent : public Component, public TextSensorListener {
  public:
+  void set_audio_output_mode(AudioOutputMode mode);
+  void set_audio_output_mode(int mode); // For automations using integers
+
+  void set_text_sensor(TextSensor *text_sensor) { text_sensor_ = text_sensor; }
+
   void setup() override;
   void loop() override;
   void dump_config() override;
-  float get_setup_priority() const override { return setup_priority::LATE; }
-
-  void set_audio_output_mode(AudioOutputMode mode);
-  void set_audio_output_mode(int mode);
-  void set_text_sensor(text_sensor::TextSensor *text_sensor) { text_sensor_ = text_sensor; }
-  bool is_usb_audio_connected() const { return usb_audio_connected_; }
-  void update_text_sensor();
-  
-  // Handlers for USB events
-  void handle_device_connection();
-  void handle_device_disconnection();
 
  protected:
   bool detect_usb_audio_device_();
+  void handle_device_connection();
+  void handle_device_disconnection();
   void apply_audio_output_();
+  void enable_internal_speaker_(bool enable);
+  void update_text_sensor();
 
-  AudioOutputMode audio_output_mode_{AudioOutputMode::AUTO_SELECT};
-  bool usb_audio_connected_{false};
-  text_sensor::TextSensor *text_sensor_{nullptr};
+  AudioOutputMode audio_output_mode_ = AudioOutputMode::AUTO_SELECT;
+  bool usb_audio_connected_ = false;
+  TextSensor *text_sensor_ = nullptr;
 };
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
