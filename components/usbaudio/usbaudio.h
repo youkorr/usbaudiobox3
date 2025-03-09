@@ -2,7 +2,6 @@
 
 #include "esphome/core/component.h"
 #include "esphome/components/text_sensor/text_sensor.h" // Include TextSensor
-#include "esphome/core/ hal.h"  // Include esphome::Component
 
 namespace esphome {
 namespace usbaudio {
@@ -24,10 +23,11 @@ class USBAudioComponent : public Component, public text_sensor::TextSensorListen
   void loop() override;
   void dump_config() override;
 
- protected:
-  bool detect_usb_audio_device_();
   void handle_device_connection();
   void handle_device_disconnection();
+
+ protected:
+  bool detect_usb_audio_device_();
   void apply_audio_output_();
   void enable_internal_speaker_(bool enable);
   void update_text_sensor();
@@ -39,6 +39,7 @@ class USBAudioComponent : public Component, public text_sensor::TextSensorListen
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
 
 
