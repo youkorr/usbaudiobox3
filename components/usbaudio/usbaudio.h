@@ -4,7 +4,6 @@
 #include "esphome/core/hal.h"
 #include "esphome/components/text_sensor/text_sensor.h"
 #include "usb/usb_host.h"
-#include "usb_host_uac.h"
 
 namespace esphome {
 namespace usbaudio {
