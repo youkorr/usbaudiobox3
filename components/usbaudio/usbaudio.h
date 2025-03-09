@@ -1,40 +1,39 @@
 #pragma once
 
 #include "esphome/core/component.h"
-#include "esphome/components/text_sensor/text_sensor.h" // Include TextSensor
+#include "esphome/core/hal.h"
+#include "esphome/components/text_sensor/text_sensor.h"
+#include "usb/usb_host.h"
 
 namespace esphome {
 namespace usbaudio {
 
 enum class AudioOutputMode {
-  AUTO_SELECT,
-  INTERNAL_SPEAKERS,
-  USB_HEADSET
+  INTERNAL_SPEAKERS = 0,
+  USB_HEADSET = 1,
+  AUTO_SELECT = 2
 };
 
 class USBAudioComponent : public Component {
  public:
-  void set_audio_output_mode(AudioOutputMode mode);
-  void set_audio_output_mode(int mode); // Pour les automations utilisant des entiers
-
-  void set_text_sensor(esphome::text_sensor::TextSensor *text_sensor) { text_sensor_ = text_sensor; }
-
   void setup() override;
   void loop() override;
   void dump_config() override;
 
-  void handle_device_connection();
-  void handle_device_disconnection();
+  void set_audio_output_mode(AudioOutputMode mode);
+  void set_audio_output_mode(int mode);
+  AudioOutputMode get_audio_output_mode() const { return audio_output_mode_; }
+  bool is_usb_headset_connected() const { return usb_audio_connected_; }
+  void set_text_sensor(text_sensor::TextSensor *text_sensor) { text_sensor_ = text_sensor; }
 
  protected:
-  bool detect_usb_audio_device_();
   void apply_audio_output_();
-  void enable_internal_speaker_(bool enable);
+  bool detect_usb_audio_device_();
   void update_text_sensor();
 
-  AudioOutputMode audio_output_mode_ = AudioOutputMode::AUTO_SELECT;
-  bool usb_audio_connected_ = false;
-  esphome::text_sensor::TextSensor *text_sensor_ = nullptr;
+  AudioOutputMode audio_output_mode_{AudioOutputMode::AUTO_SELECT};
+  bool usb_audio_connected_{false};
+  text_sensor::TextSensor *text_sensor_{nullptr};
 };
 
 }  // namespace usbaudio
