@@ -2,6 +2,7 @@
 
 #include "esphome/core/component.h"
 #include "esphome/components/text_sensor/text_sensor.h" // Include TextSensor
+#include "esphome/components/text_sensor/text_sensor_listener.h" // Include TextSensorListener
 
 namespace esphome {
 namespace usbaudio {
@@ -39,6 +40,7 @@ class USBAudioComponent : public Component, public esphome::text_sensor::TextSen
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
 
 
