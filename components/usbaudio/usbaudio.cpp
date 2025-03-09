@@ -7,6 +7,10 @@ namespace usbaudio {
 
 static const char *const TAG = "usbaudio";
 
+// Définition des fonctions GPIO
+int8_t get_headphone_detect_gpio() { return HEADPHONE_DETECT; }
+int8_t get_pa_enable_gpio() { return PA_ENABLE_GPIO; }
+
 // GPIO pour la détection du casque et l'amplificateur audio
 const int HEADPHONE_DETECT_PIN = get_headphone_detect_gpio();  // GPIO pour la détection du casque
 const int PA_ENABLE_PIN = get_pa_enable_gpio();               // GPIO pour activer l'amplificateur audio
