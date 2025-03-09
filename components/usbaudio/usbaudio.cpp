@@ -1,6 +1,7 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
 #include "usb/usb_host.h"
+#include "usb_host_uac.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -9,6 +10,7 @@ static const char *const TAG = "usbaudio";
 
 // Variables globales pour le client USB Host
 static usb_host_client_handle_t client_hdl = nullptr;
+static uac_device_t *uac_device = nullptr;
 static bool usb_host_initialized = false;
 
 void USBAudioComponent::set_audio_output_mode(AudioOutputMode mode) {
@@ -32,14 +34,17 @@ bool USBAudioComponent::detect_usb_audio_device_() {
   }
 
   bool device_present = false;
-  usb_device_handle_t dev_hdl;
   
-  // Obtenir le handle du premier périphérique connecté
-  if (usb_host_device_open(client_hdl, 0, &dev_hdl) == ESP_OK) {
-    // Vérifier la présence d'un périphérique USB
+  // Vérifier si un périphérique UAC est déjà connecté
+  if (uac_device != nullptr) {
+    return true;
+  }
+
+  // Détecter un nouveau périphérique UAC
+  uac_device = uac_init();
+  if (uac_device != nullptr) {
     device_present = true;
-    ESP_LOGD(TAG, "Périphérique USB détecté");
-    usb_host_device_close(client_hdl, dev_hdl);
+    ESP_LOGD(TAG, "Périphérique audio UAC détecté");
   }
 
   return device_present;
@@ -51,9 +56,16 @@ void USBAudioComponent::apply_audio_output_() {
     switch (audio_output_mode_) {
       case AudioOutputMode::INTERNAL_SPEAKERS:
         ESP_LOGD(TAG, "Activation forcée des haut-parleurs internes");
+        if (uac_device) {
+          uac_deinit(uac_device);
+          uac_device = nullptr;
+        }
         break;
       case AudioOutputMode::USB_HEADSET:
         ESP_LOGD(TAG, "Activation forcée du casque USB");
+        if (!uac_device) {
+          detect_usb_audio_device_();
+        }
         break;
       default:
         break;
@@ -64,8 +76,15 @@ void USBAudioComponent::apply_audio_output_() {
   // Mode automatique
   if (usb_audio_connected_) {
     ESP_LOGD(TAG, "Basculement vers le casque USB (mode automatique)");
+    if (!uac_device) {
+      detect_usb_audio_device_();
+    }
   } else {
     ESP_LOGD(TAG, "Basculement vers les haut-parleurs internes (mode automatique)");
+    if (uac_device) {
+      uac_deinit(uac_device);
+      uac_device = nullptr;
+    }
   }
 }
 
