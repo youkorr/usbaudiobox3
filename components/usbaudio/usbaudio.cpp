@@ -11,10 +11,6 @@ static const char *const TAG = "usbaudio";
 static usb_host_client_handle_t client_hdl = nullptr;
 static bool usb_host_initialized = false;
 
-// Identifiants de classe USB Audio
-const uint8_t USB_CLASS_AUDIO = 0x01;
-const uint8_t USB_SUBCLASS_AUDIOCONTROL = 0x01;
-
 void USBAudioComponent::set_audio_output_mode(AudioOutputMode mode) {
   if (audio_output_mode_ != mode) {
     audio_output_mode_ = mode;
@@ -37,18 +33,12 @@ bool USBAudioComponent::detect_usb_audio_device_() {
 
   bool device_present = false;
   usb_device_handle_t dev_hdl;
-  usb_device_info_t dev_info;
   
   // Obtenir le handle du premier périphérique connecté
   if (usb_host_device_open(client_hdl, 0, &dev_hdl) == ESP_OK) {
-    if (usb_host_device_info(dev_hdl, &dev_info) == ESP_OK) {
-      // Vérifier si c'est un périphérique audio
-      if (dev_info.bDeviceClass == USB_CLASS_AUDIO ||
-          dev_info.bDeviceSubClass == USB_SUBCLASS_AUDIOCONTROL) {
-        device_present = true;
-        ESP_LOGD(TAG, "Périphérique audio USB détecté");
-      }
-    }
+    // Vérifier la présence d'un périphérique USB
+    device_present = true;
+    ESP_LOGD(TAG, "Périphérique USB détecté");
     usb_host_device_close(client_hdl, dev_hdl);
   }
 
