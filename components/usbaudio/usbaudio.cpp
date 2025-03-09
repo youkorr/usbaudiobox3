@@ -1,6 +1,6 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
-#include "esphome/core/hal.h"
+#include "driver/gpio.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -8,7 +8,7 @@ namespace usbaudio {
 static const char *const TAG = "usbaudio";
 
 // GPIO pour la détection du casque
-const int HEADPHONE_DETECT_PIN = HEADPHONE_DETECT;  // Utilise la constante HEADPHONE_DETECT
+const int HEADPHONE_DETECT_PIN = GPIO_NUM_19;  // Remplacez par le GPIO réel utilisé
 
 void USBAudioComponent::set_audio_output_mode(AudioOutputMode mode) {
   if (audio_output_mode_ != mode) {
@@ -32,7 +32,7 @@ bool USBAudioComponent::detect_headphone_() {
   }
 
   // Lire l'état du GPIO
-  bool headphone_connected = digitalRead(HEADPHONE_DETECT_PIN) == HIGH;
+  bool headphone_connected = gpio_get_level((gpio_num_t)HEADPHONE_DETECT_PIN) == 1;
   ESP_LOGD(TAG, "État du casque : %s", headphone_connected ? "Connecté" : "Déconnecté");
   return headphone_connected;
 }
@@ -66,7 +66,14 @@ void USBAudioComponent::setup() {
 
   // Configurer le GPIO pour la détection du casque
   if (HEADPHONE_DETECT_PIN != -1) {
-    pinMode(HEADPHONE_DETECT_PIN, INPUT);
+    gpio_config_t io_conf;
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pin_bit_mask = (1ULL << HEADPHONE_DETECT_PIN);
+    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+    gpio_config(&io_conf);
+
     ESP_LOGD(TAG, "GPIO %d configuré pour la détection du casque", HEADPHONE_DETECT_PIN);
   } else {
     ESP_LOGE(TAG, "Aucun GPIO configuré pour la détection du casque");
