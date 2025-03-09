@@ -7,8 +7,9 @@ namespace usbaudio {
 
 static const char *const TAG = "usbaudio";
 
-// GPIO pour la détection du casque
-const int HEADPHONE_DETECT_PIN = GPIO_NUM_19;  // Remplacez par le GPIO réel utilisé
+// GPIO pour la détection du casque et l'amplificateur audio
+const int HEADPHONE_DETECT_PIN = get_headphone_detect_gpio();  // GPIO pour la détection du casque
+const int PA_ENABLE_PIN = get_pa_enable_gpio();               // GPIO pour activer l'amplificateur audio
 
 void USBAudioComponent::set_audio_output_mode(AudioOutputMode mode) {
   if (audio_output_mode_ != mode) {
@@ -43,9 +44,15 @@ void USBAudioComponent::apply_audio_output_() {
     switch (audio_output_mode_) {
       case AudioOutputMode::INTERNAL_SPEAKERS:
         ESP_LOGD(TAG, "Activation forcée des haut-parleurs internes");
+        if (PA_ENABLE_PIN != -1) {
+          gpio_set_level((gpio_num_t)PA_ENABLE_PIN, 1);  // Activer l'amplificateur audio
+        }
         break;
       case AudioOutputMode::USB_HEADSET:
         ESP_LOGD(TAG, "Activation forcée du casque USB");
+        if (PA_ENABLE_PIN != -1) {
+          gpio_set_level((gpio_num_t)PA_ENABLE_PIN, 0);  // Désactiver l'amplificateur audio
+        }
         break;
       default:
         break;
@@ -56,8 +63,14 @@ void USBAudioComponent::apply_audio_output_() {
   // Mode automatique
   if (usb_audio_connected_) {
     ESP_LOGD(TAG, "Basculement vers le casque USB (mode automatique)");
+    if (PA_ENABLE_PIN != -1) {
+      gpio_set_level((gpio_num_t)PA_ENABLE_PIN, 0);  // Désactiver l'amplificateur audio
+    }
   } else {
     ESP_LOGD(TAG, "Basculement vers les haut-parleurs internes (mode automatique)");
+    if (PA_ENABLE_PIN != -1) {
+      gpio_set_level((gpio_num_t)PA_ENABLE_PIN, 1);  // Activer l'amplificateur audio
+    }
   }
 }
 
@@ -77,6 +90,21 @@ void USBAudioComponent::setup() {
     ESP_LOGD(TAG, "GPIO %d configuré pour la détection du casque", HEADPHONE_DETECT_PIN);
   } else {
     ESP_LOGE(TAG, "Aucun GPIO configuré pour la détection du casque");
+  }
+
+  // Configurer le GPIO pour l'amplificateur audio
+  if (PA_ENABLE_PIN != -1) {
+    gpio_config_t io_conf;
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    io_conf.mode = GPIO_MODE_OUTPUT;
+    io_conf.pin_bit_mask = (1ULL << PA_ENABLE_PIN);
+    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+    gpio_config(&io_conf);
+
+    ESP_LOGD(TAG, "GPIO %d configuré pour l'amplificateur audio", PA_ENABLE_PIN);
+  } else {
+    ESP_LOGE(TAG, "Aucun GPIO configuré pour l'amplificateur audio");
   }
 
   // Détection initiale
