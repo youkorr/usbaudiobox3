@@ -36,10 +36,11 @@ bool USBAudioComponent::detect_usb_audio_device_() {
   
   // Obtenir le handle du premier périphérique connecté
   if (usb_host_device_open(client_hdl, 0, &dev_hdl) == ESP_OK) {
-    // Vérifier si c'est un périphérique audio
-    uint8_t device_class;
-    if (usb_host_get_device_descriptor(dev_hdl, &device_class) == ESP_OK) {
-      if (device_class == USB_CLASS_AUDIO) {
+    // Obtenir le descripteur du périphérique
+    const usb_device_desc_t *device_desc;
+    if (usb_host_get_device_descriptor(dev_hdl, &device_desc) == ESP_OK) {
+      // Vérifier si c'est un périphérique audio
+      if (device_desc->bDeviceClass == USB_CLASS_AUDIO) {
         device_present = true;
         ESP_LOGD(TAG, "Périphérique audio USB détecté");
       }
