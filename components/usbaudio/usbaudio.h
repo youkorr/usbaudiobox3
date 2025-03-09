@@ -3,17 +3,10 @@
 #include "esphome/core/component.h"
 #include "esphome/core/hal.h"
 #include "esphome/components/text_sensor/text_sensor.h"
+#include "usb/usb_host.h"
 
 namespace esphome {
 namespace usbaudio {
-
-// Définition des constantes GPIO
-const int8_t HEADPHONE_DETECT = 19;  // Remplacez par le GPIO réel utilisé pour la détection du casque
-const int8_t PA_ENABLE_GPIO = 18;    // Remplacez par le GPIO réel utilisé pour activer l'amplificateur audio
-
-// Déclaration des fonctions GPIO
-int8_t get_headphone_detect_gpio();
-int8_t get_pa_enable_gpio();
 
 enum class AudioOutputMode {
   INTERNAL_SPEAKERS = 0,
@@ -35,7 +28,7 @@ class USBAudioComponent : public Component {
 
  protected:
   void apply_audio_output_();
-  bool detect_headphone_();
+  bool detect_usb_audio_device_();
   void update_text_sensor();
 
   AudioOutputMode audio_output_mode_{AudioOutputMode::AUTO_SELECT};
