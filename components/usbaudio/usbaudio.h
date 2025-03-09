@@ -2,7 +2,6 @@
 
 #include "esphome/core/component.h"
 #include "esphome/components/text_sensor/text_sensor.h" // Include TextSensor
-#include "esphome/components/text_sensor/text_sensor_listener.h" // Include TextSensorListener
 
 namespace esphome {
 namespace usbaudio {
@@ -13,7 +12,7 @@ enum class AudioOutputMode {
   USB_HEADSET
 };
 
-class USBAudioComponent : public Component, public esphome::text_sensor::TextSensorListener {
+class USBAudioComponent : public Component {
  public:
   void set_audio_output_mode(AudioOutputMode mode);
   void set_audio_output_mode(int mode); // For automations using integers
@@ -40,6 +39,7 @@ class USBAudioComponent : public Component, public esphome::text_sensor::TextSen
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
 
 
