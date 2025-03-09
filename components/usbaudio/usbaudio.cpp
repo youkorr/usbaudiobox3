@@ -7,6 +7,10 @@ namespace usbaudio {
 
 static const char *const TAG = "usbaudio";
 
+// Variables globales pour le client USB Host
+static usb_host_client_handle_t client_hdl = nullptr;
+static bool usb_host_initialized = false;
+
 void USBAudioComponent::set_audio_output_mode(AudioOutputMode mode) {
   if (audio_output_mode_ != mode) {
     audio_output_mode_ = mode;
@@ -23,18 +27,7 @@ void USBAudioComponent::set_audio_output_mode(int mode) {
 }
 
 bool USBAudioComponent::detect_usb_audio_device_() {
-  usb_host_client_handle_t client_hdl;
-  usb_host_client_config_t client_config = {
-      .is_synchronous = false,
-      .max_num_event_msg = 5,
-      .async = {
-          .client_event_callback = nullptr,
-          .callback_arg = nullptr,
-      }};
-  
-  esp_err_t err = usb_host_client_register(&client_config, &client_hdl);
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Erreur d'initialisation USB Host: %s", esp_err_to_name(err));
+  if (!usb_host_initialized) {
     return false;
   }
 
@@ -50,7 +43,6 @@ bool USBAudioComponent::detect_usb_audio_device_() {
     usb_host_device_close(client_hdl, dev_hdl);
   }
 
-  usb_host_client_deregister(client_hdl);
   return device_present;
 }
 
@@ -77,6 +69,24 @@ void USBAudioComponent::apply_audio_output_() {
 
 void USBAudioComponent::setup() {
   ESP_LOGD(TAG, "Initialisation du composant USB Audio");
+
+  // Initialisation du client USB Host
+  usb_host_client_config_t client_config = {
+      .is_synchronous = false,
+      .max_num_event_msg = 5,
+      .async = {
+          .client_event_callback = nullptr,
+          .callback_arg = nullptr,
+      }};
+  
+  esp_err_t err = usb_host_client_register(&client_config, &client_hdl);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Erreur d'initialisation USB Host: %s", esp_err_to_name(err));
+    usb_host_initialized = false;
+  } else {
+    usb_host_initialized = true;
+  }
+
   usb_audio_connected_ = detect_usb_audio_device_();
   apply_audio_output_();
 }
