@@ -3,6 +3,7 @@
 #include "esphome/core/component.h"
 #include "esphome/core/hal.h"
 #include "esphome/components/text_sensor/text_sensor.h"
+#include "usb/usb_host.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -26,7 +27,6 @@ class USBAudioComponent : public Component {
   void set_text_sensor(text_sensor::TextSensor *text_sensor) { text_sensor_ = text_sensor; }
 
  protected:
-  void handle_usb_audio_connection_();
   void apply_audio_output_();
   bool detect_usb_audio_device_();
   void update_text_sensor();
