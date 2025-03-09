@@ -1,6 +1,7 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
 #include "usb/usb_host.h"
+#include "usb/uac_host.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -9,6 +10,7 @@ static const char *const TAG = "usbaudio";
 
 // Variables globales pour le client USB Host
 static usb_host_client_handle_t client_hdl = nullptr;
+static uac_host_device_handle_t uac_hdl = nullptr;
 static bool usb_host_initialized = false;
 
 void USBAudioComponent::set_audio_output_mode(AudioOutputMode mode) {
@@ -33,12 +35,13 @@ bool USBAudioComponent::detect_usb_audio_device_() {
 
   bool device_present = false;
   usb_device_handle_t dev_hdl;
-  usb_device_info_t dev_info;
   
   // Obtenir le handle du premier périphérique connecté
   if (usb_host_device_open(client_hdl, 0, &dev_hdl) == ESP_OK) {
-    if (usb_host_device_info(dev_hdl, &dev_info) == ESP_OK) {
+    // Vérifier si c'est un périphérique audio UAC
+    if (uac_host_device_init(dev_hdl, &uac_hdl) == ESP_OK) {
       device_present = true;
+      ESP_LOGD(TAG, "Périphérique audio UAC détecté");
     }
     usb_host_device_close(client_hdl, dev_hdl);
   }
@@ -47,23 +50,40 @@ bool USBAudioComponent::detect_usb_audio_device_() {
 }
 
 void USBAudioComponent::apply_audio_output_() {
-  AudioOutputMode effective_mode = audio_output_mode_;
-
-  if (effective_mode == AudioOutputMode::AUTO_SELECT) {
-    effective_mode = usb_audio_connected_ ? AudioOutputMode::USB_HEADSET
-                                          : AudioOutputMode::INTERNAL_SPEAKERS;
+  if (audio_output_mode_ != AudioOutputMode::AUTO_SELECT) {
+    // Mode manuel
+    switch (audio_output_mode_) {
+      case AudioOutputMode::INTERNAL_SPEAKERS:
+        ESP_LOGD(TAG, "Activation forcée des haut-parleurs internes");
+        if (uac_hdl) {
+          uac_host_device_deinit(uac_hdl);
+          uac_hdl = nullptr;
+        }
+        break;
+      case AudioOutputMode::USB_HEADSET:
+        ESP_LOGD(TAG, "Activation forcée du casque USB");
+        if (!uac_hdl) {
+          detect_usb_audio_device_();
+        }
+        break;
+      default:
+        break;
+    }
+    return;
   }
 
-  switch (effective_mode) {
-    case AudioOutputMode::INTERNAL_SPEAKERS:
-      ESP_LOGD(TAG, "Activation des haut-parleurs internes");
-      break;
-    case AudioOutputMode::USB_HEADSET:
-      ESP_LOGD(TAG, "Activation du casque USB");
-      break;
-    default:
-      ESP_LOGE(TAG, "Mode audio inconnu");
-      break;
+  // Mode automatique
+  if (usb_audio_connected_) {
+    ESP_LOGD(TAG, "Basculement vers le casque USB (mode automatique)");
+    if (!uac_hdl) {
+      detect_usb_audio_device_();
+    }
+  } else {
+    ESP_LOGD(TAG, "Basculement vers les haut-parleurs internes (mode automatique)");
+    if (uac_hdl) {
+      uac_host_device_deinit(uac_hdl);
+      uac_hdl = nullptr;
+    }
   }
 }
 
@@ -87,6 +107,7 @@ void USBAudioComponent::setup() {
     usb_host_initialized = true;
   }
 
+  // Détection initiale
   usb_audio_connected_ = detect_usb_audio_device_();
   apply_audio_output_();
 }
