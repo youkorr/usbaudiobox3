@@ -7,6 +7,10 @@
 namespace esphome {
 namespace usbaudio {
 
+// Définition des constantes GPIO
+const int8_t HEADPHONE_DETECT = 19;  // Remplacez par le GPIO réel utilisé pour la détection du casque
+const int8_t PA_ENABLE_GPIO = 18;    // Remplacez par le GPIO réel utilisé pour activer l'amplificateur audio
+
 // Déclaration des fonctions GPIO
 int8_t get_headphone_detect_gpio();
 int8_t get_pa_enable_gpio();
