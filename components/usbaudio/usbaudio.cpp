@@ -3,6 +3,8 @@
 #include "usb/usb_host.h"
 #include "driver/gpio.h"  // Required for GPIO control
 #include "esp_timer.h"     // Required for esp_timer_get_time()
+#include "freertos/FreeRTOS.h" // Required for FreeRTOS functions
+#include "freertos/task.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -17,6 +19,10 @@ static bool usb_host_initialized = false;
 #ifdef USE_ESP32S3_BOX_3  // Only include if it's the ESP32-S3-BOX-3
 static const int INTERNAL_SPEAKER_ENABLE_GPIO = 38; // Example GPIO, check your board
 #endif
+
+// USB Descriptor Types and Classes
+#define USB_DESCRIPTOR_TYPE_INTERFACE 0x04
+#define USB_CLASS_AUDIO 0x01
 
 // Callback for USB events
 static void usb_event_callback(const usb_host_client_event_msg_t *event_msg, void *arg) {
@@ -75,50 +81,38 @@ bool USBAudioComponent::detect_usb_audio_device_() {
     return false;
   }
 
-  // Check if it's directly an audio device
-  if (dev_desc->bDeviceClass == 0x00) { // Changed to 0x00 to check interface descriptors for audio class
-      ESP_LOGD(TAG, "Device class is interface defined, checking interface descriptors");
-  } else if (dev_desc->bDeviceClass == 0x01) {
-    audio_device_present = true;
-    ESP_LOGD(TAG, "USB Audio device detected (device class 0x01)");
-  } else {
-    ESP_LOGD(TAG, "Device class is not audio (0x01), skipping device class check.");
-  }
-  
     // If not directly identified as Audio Device class, check interfaces within configurations
-    if (!audio_device_present) {
-        const usb_config_desc_t *config_desc = nullptr;
-        if (usb_host_get_active_config_descriptor(dev_hdl, &config_desc) == ESP_OK) {
-            ESP_LOGD(TAG, "Active configuration descriptor obtained");
-            uint8_t curr_idx = 0;
-            const uint8_t *ptr = config_desc->val;
+    const usb_config_desc_t *config_desc = nullptr;
+    if (usb_host_get_active_config_descriptor(dev_hdl, &config_desc) == ESP_OK) {
+        ESP_LOGD(TAG, "Active configuration descriptor obtained");
+        uint8_t curr_idx = 0;
+        const uint8_t *ptr = config_desc->val;
 
-            while (curr_idx < config_desc->wTotalLength) {
-                uint8_t desc_len = ptr[curr_idx];
-                uint8_t desc_type = ptr[curr_idx + 1];
+        while (curr_idx < config_desc->wTotalLength) {
+            uint8_t desc_len = ptr[curr_idx];
+            uint8_t desc_type = ptr[curr_idx + 1];
 
-                if (desc_type == USB_DESCRIPTOR_TYPE_INTERFACE && desc_len >= 9) {
-                    uint8_t intf_class = ptr[curr_idx + 5];
-                    uint8_t intf_subclass = ptr[curr_idx + 6];
-                    uint8_t intf_protocol = ptr[curr_idx + 7];
-                    ESP_LOGD(TAG, "Interface descriptor found: Class=0x%02X, SubClass=0x%02X, Protocol=0x%02X", intf_class, intf_subclass, intf_protocol);
+            if (desc_type == USB_DESCRIPTOR_TYPE_INTERFACE && desc_len >= 9) {
+                uint8_t intf_class = ptr[curr_idx + 5];
+                uint8_t intf_subclass = ptr[curr_idx + 6];
+                uint8_t intf_protocol = ptr[curr_idx + 7];
+                ESP_LOGD(TAG, "Interface descriptor found: Class=0x%02X, SubClass=0x%02X, Protocol=0x%02X", intf_class, intf_subclass, intf_protocol);
 
-                    if (intf_class == USB_CLASS_AUDIO) {
-                        ESP_LOGI(TAG, "Audio interface detected (Class: 0x%02X)", USB_CLASS_AUDIO);
-                        audio_device_present = true;
-                        break;
-                    }
-                }
-
-                curr_idx += desc_len;
-                if (desc_len == 0) {
-                  ESP_LOGE(TAG, "Invalid descriptor length, exiting loop");
-                  break;
+                if (intf_class == USB_CLASS_AUDIO) {
+                    ESP_LOGI(TAG, "Audio interface detected (Class: 0x%02X)", USB_CLASS_AUDIO);
+                    audio_device_present = true;
+                    break;
                 }
             }
-        } else {
-            ESP_LOGW(TAG, "Failed to get active config descriptor");
+
+            curr_idx += desc_len;
+            if (desc_len == 0) {
+              ESP_LOGE(TAG, "Invalid descriptor length, exiting loop");
+              break;
+            }
         }
+    } else {
+        ESP_LOGW(TAG, "Failed to get active config descriptor");
     }
   
   // Release resources
@@ -241,6 +235,8 @@ void USBAudioComponent::setup() {
   io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
   io_conf.flag = 0;
   gpio_config(&io_conf);
+  // Disable internal speaker on startup.  Adjust if needed.
+  enable_internal_speaker_(false);
 #endif
 
   apply_audio_output_();
@@ -268,6 +264,7 @@ void USBAudioComponent::loop() {
       update_text_sensor();
     }
   }
+  vTaskDelay(pdMS_TO_TICKS(10)); // Add a small delay to prevent watchdog timeouts
 }
 
 void USBAudioComponent::dump_config() {
@@ -279,12 +276,13 @@ void USBAudioComponent::dump_config() {
 
 void USBAudioComponent::update_text_sensor() {
   if (text_sensor_ != nullptr) {
-    text_sensor_->publish_state(usb_audio_connected_ ? "Connected" : "Disconnected");
+    text_sensor_->publish_state(usb_audio_connected_ ? "Connecté" : "Déconnecté");
   }
 }
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
 
 
