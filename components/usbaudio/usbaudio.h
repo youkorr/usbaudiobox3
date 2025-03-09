@@ -1,7 +1,8 @@
 #pragma once
 
 #include "esphome/core/component.h"
-#include "esphome/components/text_sensor/text_sensor.h"
+#include "esphome/components/text_sensor/text_sensor.h" // Include TextSensor
+#include "esphome/core/ hal.h"  // Include esphome::Component
 
 namespace esphome {
 namespace usbaudio {
@@ -12,12 +13,12 @@ enum class AudioOutputMode {
   USB_HEADSET
 };
 
-class USBAudioComponent : public Component, public TextSensorListener {
+class USBAudioComponent : public Component, public text_sensor::TextSensorListener {
  public:
   void set_audio_output_mode(AudioOutputMode mode);
   void set_audio_output_mode(int mode); // For automations using integers
 
-  void set_text_sensor(TextSensor *text_sensor) { text_sensor_ = text_sensor; }
+  void set_text_sensor(text_sensor::TextSensor *text_sensor) { text_sensor_ = text_sensor; }
 
   void setup() override;
   void loop() override;
@@ -33,10 +34,11 @@ class USBAudioComponent : public Component, public TextSensorListener {
 
   AudioOutputMode audio_output_mode_ = AudioOutputMode::AUTO_SELECT;
   bool usb_audio_connected_ = false;
-  TextSensor *text_sensor_ = nullptr;
+  text_sensor::TextSensor *text_sensor_ = nullptr;
 };
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
 
