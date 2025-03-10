@@ -2,7 +2,6 @@
 
 #include "esphome/core/component.h"
 #include "esphome/core/hal.h"
-#include "esphome/components/text_sensor/text_sensor.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -27,7 +26,6 @@ class USBAudioComponent : public Component {
   void set_dplus_pin(GPIOPin *pin) { dplus_pin_ = pin; }
 
  protected:
-  void handle_usb_audio_connection_();
   void apply_audio_output_();
   bool detect_usb_audio_device_();
 
