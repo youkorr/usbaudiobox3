@@ -2,6 +2,7 @@
 #include "esphome/core/log.h"
 #include "esphome/core/gpio.h"
 #include "driver/gpio.h"
+#include "driver/usb_serial_jtag.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -24,17 +25,18 @@ void USBAudioComponent::set_audio_output_mode(int mode) {
 }
 
 bool USBAudioComponent::detect_usb_audio_device_() {
-  if (dminus_pin_ == nullptr || dplus_pin_ == nullptr) {
-    ESP_LOGE(TAG, "Broches D- et D+ non configurées");
+  // Utilisation de l'API USB Device d'ESP-IDF pour détecter la connexion USB
+  usb_serial_jtag_driver_config_t usb_config = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
+  esp_err_t err = usb_serial_jtag_driver_install(&usb_config);
+  if (err != ESP_OK) {
+    ESP_LOGE(TAG, "Échec de l'installation du pilote USB: %s", esp_err_to_name(err));
     return false;
   }
 
-  bool dminus_state = dminus_pin_->digital_read();
-  bool dplus_state = dplus_pin_->digital_read();
+  bool usb_connected = usb_serial_jtag_is_connected();
+  usb_serial_jtag_driver_uninstall();
 
-  // Détection de la connexion USB
-  // Un appareil USB connecté devrait avoir D+ ou D- à HIGH
-  return dminus_state || dplus_state;
+  return usb_connected;
 }
 
 void USBAudioComponent::apply_audio_output_() {
@@ -60,10 +62,6 @@ void USBAudioComponent::apply_audio_output_() {
 
 void USBAudioComponent::setup() {
   ESP_LOGD(TAG, "Initialisation du composant USB Audio");
-  if (dminus_pin_ != nullptr && dplus_pin_ != nullptr) {
-    dminus_pin_->setup();
-    dplus_pin_->setup();
-  }
   usb_audio_connected_ = detect_usb_audio_device_();
   apply_audio_output_();
 }
@@ -86,12 +84,6 @@ void USBAudioComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "USB Audio:");
   ESP_LOGCONFIG(TAG, "  Mode: %d", static_cast<int>(audio_output_mode_));
   ESP_LOGCONFIG(TAG, "  Casque USB connecté: %s", usb_audio_connected_ ? "OUI" : "NON");
-  if (dminus_pin_ != nullptr && dplus_pin_ != nullptr) {
-    ESP_LOGCONFIG(TAG, "  Broche D-:");
-    dminus_pin_->dump_summary();
-    ESP_LOGCONFIG(TAG, "  Broche D+:");
-    dplus_pin_->dump_summary();
-  }
 }
 
 }  // namespace usbaudio
