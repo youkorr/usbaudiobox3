@@ -8,91 +8,23 @@ namespace usbaudio {
 
 static const char *const TAG = "usbaudio";
 
-// Variables globales pour le client USB Host
-static usb_host_client_handle_t client_hdl = nullptr;
-static bool usb_host_initialized = false;
-
-// Broches GPIO pour USB
-const int USB_DM_PIN = GPIO_NUM_19;  // USB D- (GPIO 19)
-const int USB_DP_PIN = GPIO_NUM_20;  // USB D+ (GPIO 20)
-
-void USBAudioComponent::set_audio_output_mode(AudioOutputMode mode) {
-  if (audio_output_mode_ != mode) {
-    audio_output_mode_ = mode;
-    apply_audio_output_();
-  }
-}
-
-void USBAudioComponent::set_audio_output_mode(int mode) {
-  AudioOutputMode new_mode = static_cast<AudioOutputMode>(mode);
-  if (new_mode != audio_output_mode_) {
-    audio_output_mode_ = new_mode;
-    apply_audio_output_();
-  }
-}
-
-bool USBAudioComponent::detect_usb_audio_device_() {
-  if (!usb_host_initialized) {
-    return false;
-  }
-
-  bool device_present = false;
-  usb_device_handle_t dev_hdl;
-  
-  // Obtenir le handle du premier périphérique connecté
-  if (usb_host_device_open(client_hdl, 0, &dev_hdl) == ESP_OK) {
-    // Obtenir le descripteur du périphérique
-    const usb_device_desc_t *device_desc;
-    if (usb_host_get_device_descriptor(dev_hdl, &device_desc) == ESP_OK) {
-      // Vérifier si c'est un périphérique audio
-      if (device_desc->bDeviceClass == USB_CLASS_AUDIO) {
-        device_present = true;
-        ESP_LOGD(TAG, "Périphérique audio USB détecté");
-      }
-    }
-    usb_host_device_close(client_hdl, dev_hdl);
-  }
-
-  return device_present;
-}
-
-void USBAudioComponent::apply_audio_output_() {
-  if (audio_output_mode_ != AudioOutputMode::AUTO_SELECT) {
-    // Mode manuel
-    switch (audio_output_mode_) {
-      case AudioOutputMode::INTERNAL_SPEAKERS:
-        ESP_LOGD(TAG, "Activation forcée des haut-parleurs internes");
-        break;
-      case AudioOutputMode::USB_HEADSET:
-        ESP_LOGD(TAG, "Activation forcée du casque USB");
-        break;
-      default:
-        break;
-    }
-    return;
-  }
-
-  // Mode automatique
-  if (usb_audio_connected_) {
-    ESP_LOGD(TAG, "Basculement vers le casque USB (mode automatique)");
-  } else {
-    ESP_LOGD(TAG, "Basculement vers les haut-parleurs internes (mode automatique)");
-  }
-}
-
 void USBAudioComponent::setup() {
   ESP_LOGD(TAG, "Initialisation du composant USB Audio");
 
   // Configuration des broches GPIO pour USB
-  gpio_config_t io_conf;
-  io_conf.intr_type = GPIO_INTR_DISABLE;
-  io_conf.mode = GPIO_MODE_INPUT_OUTPUT_OD;  // Mode open-drain pour USB
-  io_conf.pin_bit_mask = (1ULL << USB_DM_PIN) | (1ULL << USB_DP_PIN);
-  io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
-  io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
-  gpio_config(&io_conf);
+  if (dp_pin_ != -1 && dm_pin_ != -1) {
+    gpio_config_t io_conf;
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    io_conf.mode = GPIO_MODE_INPUT_OUTPUT_OD;  // Mode open-drain pour USB
+    io_conf.pin_bit_mask = (1ULL << dp_pin_) | (1ULL << dm_pin_);
+    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+    gpio_config(&io_conf);
 
-  ESP_LOGD(TAG, "Broches GPIO configurées pour USB : D- (GPIO %d), D+ (GPIO %d)", USB_DM_PIN, USB_DP_PIN);
+    ESP_LOGD(TAG, "Broches GPIO configurées pour USB : D+ (GPIO %d), D- (GPIO %d)", dp_pin_, dm_pin_);
+  } else {
+    ESP_LOGE(TAG, "Broches GPIO pour USB non configurées");
+  }
 
   // Initialisation du client USB Host
   usb_host_client_config_t client_config = {
@@ -145,6 +77,7 @@ void USBAudioComponent::update_text_sensor() {
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
 
 
