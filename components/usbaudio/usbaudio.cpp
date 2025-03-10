@@ -33,7 +33,8 @@ bool USBAudioComponent::detect_usb_audio_device_() {
   bool dplus_state = dplus_pin_->digital_read();
 
   // Détection de la connexion USB
-  return dminus_state && dplus_state;
+  // Un appareil USB connecté devrait avoir D+ ou D- à HIGH
+  return dminus_state || dplus_state;
 }
 
 void USBAudioComponent::apply_audio_output_() {
@@ -90,8 +91,6 @@ void USBAudioComponent::dump_config() {
     dminus_pin_->dump_summary();
     ESP_LOGCONFIG(TAG, "  Broche D+:");
     dplus_pin_->dump_summary();
-
-
   }
 }
 
