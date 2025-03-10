@@ -1,6 +1,7 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
 #include "usb/usb_host.h"
+#include "driver/gpio.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -10,6 +11,10 @@ static const char *const TAG = "usbaudio";
 // Variables globales pour le client USB Host
 static usb_host_client_handle_t client_hdl = nullptr;
 static bool usb_host_initialized = false;
+
+// Broches GPIO pour USB
+const int USB_DM_PIN = GPIO_NUM_19;  // USB D- (GPIO 19)
+const int USB_DP_PIN = GPIO_NUM_20;  // USB D+ (GPIO 20)
 
 void USBAudioComponent::set_audio_output_mode(AudioOutputMode mode) {
   if (audio_output_mode_ != mode) {
@@ -77,6 +82,17 @@ void USBAudioComponent::apply_audio_output_() {
 
 void USBAudioComponent::setup() {
   ESP_LOGD(TAG, "Initialisation du composant USB Audio");
+
+  // Configuration des broches GPIO pour USB
+  gpio_config_t io_conf;
+  io_conf.intr_type = GPIO_INTR_DISABLE;
+  io_conf.mode = GPIO_MODE_INPUT_OUTPUT_OD;  // Mode open-drain pour USB
+  io_conf.pin_bit_mask = (1ULL << USB_DM_PIN) | (1ULL << USB_DP_PIN);
+  io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+  io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+  gpio_config(&io_conf);
+
+  ESP_LOGD(TAG, "Broches GPIO configurées pour USB : D- (GPIO %d), D+ (GPIO %d)", USB_DM_PIN, USB_DP_PIN);
 
   // Initialisation du client USB Host
   usb_host_client_config_t client_config = {
