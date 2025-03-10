@@ -1,5 +1,6 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
+#include "esphome/core/gpio.h"
 #include "driver/gpio.h"
 
 namespace esphome {
@@ -88,8 +89,8 @@ void USBAudioComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "  Mode: %d", static_cast<int>(audio_output_mode_));
   ESP_LOGCONFIG(TAG, "  Casque USB connecté: %s", usb_audio_connected_ ? "OUI" : "NON");
   if (dminus_pin_ != nullptr && dplus_pin_ != nullptr) {
-    ESP_LOGCONFIG(TAG, "  Broche D-: GPIO%d", dminus_pin_->pin());
-    ESP_LOGCONFIG(TAG, "  Broche D+: GPIO%d", dplus_pin_->pin());
+    ESP_LOGCONFIG(TAG, "  Broche D-: GPIO%d", dminus_pin_->get_pin());
+    ESP_LOGCONFIG(TAG, "  Broche D+: GPIO%d", dplus_pin_->get_pin());
   }
 }
 
