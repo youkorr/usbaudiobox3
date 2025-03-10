@@ -77,7 +77,6 @@ void USBAudioComponent::loop() {
     if (current_state != usb_audio_connected_) {
       usb_audio_connected_ = current_state;
       apply_audio_output_();
-      update_text_sensor();
     }
   }
 }
@@ -87,14 +86,8 @@ void USBAudioComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "  Mode: %d", static_cast<int>(audio_output_mode_));
   ESP_LOGCONFIG(TAG, "  Casque USB connecté: %s", usb_audio_connected_ ? "OUI" : "NON");
   if (dminus_pin_ != nullptr && dplus_pin_ != nullptr) {
-    ESP_LOGCONFIG(TAG, "  Broche D-: GPIO%d", dminus_pin_->get_pin());
-    ESP_LOGCONFIG(TAG, "  Broche D+: GPIO%d", dplus_pin_->get_pin());
-  }
-}
-
-void USBAudioComponent::update_text_sensor() {
-  if (text_sensor_ != nullptr) {
-    text_sensor_->publish_state(usb_audio_connected_ ? "Connecté" : "Déconnecté");
+    ESP_LOGCONFIG(TAG, "  Broche D-: GPIO%d", dminus_pin_->pin);
+    ESP_LOGCONFIG(TAG, "  Broche D+: GPIO%d", dplus_pin_->pin);
   }
 }
 
