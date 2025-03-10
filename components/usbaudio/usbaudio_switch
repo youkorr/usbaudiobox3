@@ -1,0 +1,48 @@
+#include "esphome.h"
+#include "usb_host.h"
+
+class USBHostAudio : public Component {
+public:
+    void setup() override {
+        ESP_LOGI("USBHostAudio", "Initializing USB Host");
+        usb_host_config_t host_config = {
+            .intr_flags = ESP_INTR_FLAG_LEVEL1
+        };
+        esp_err_t err = usb_host_install(&host_config);
+        if (err != ESP_OK) {
+            ESP_LOGE("USBHostAudio", "USB Host installation failed: %d", err);
+            return;
+        }
+        ESP_LOGI("USBHostAudio", "USB Host initialized");
+    }
+
+    void loop() override {
+        bool headset_connected = check_headset_connected();
+        if (headset_connected && !last_state) {
+            ESP_LOGI("USBHostAudio", "Headset connected, switching audio");
+            switch_to_usb_audio();
+        } else if (!headset_connected && last_state) {
+            ESP_LOGI("USBHostAudio", "Headset disconnected, switching to speaker");
+            switch_to_speaker();
+        }
+        last_state = headset_connected;
+    }
+
+private:
+    bool last_state = false;
+
+    bool check_headset_connected() {
+        // Logique pour détecter un périphérique USB Audio Class (UAC)
+        return false; // Remplace par la détection réelle
+    }
+
+    void switch_to_usb_audio() {
+        // Logique pour rediriger l'audio vers le casque USB
+    }
+
+    void switch_to_speaker() {
+        // Logique pour repasser à la sortie haut-parleur
+    }
+};
+
+REGISTER_COMPONENT(USBHostAudio);
