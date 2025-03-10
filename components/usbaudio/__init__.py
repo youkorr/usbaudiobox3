@@ -3,7 +3,7 @@ import esphome.config_validation as cv
 from esphome.components import text_sensor
 from esphome.const import CONF_ID, CONF_DP, CONF_DM
 
-DEPENDENCIES = ["usb_host"]
+DEPENDENCIES = []  # Supprimez "usb_host" de la liste des dépendances
 
 CONF_DP = "dp"  # Broche D+ (USB)
 CONF_DM = "dm"  # Broche D- (USB)
@@ -30,5 +30,6 @@ async def to_code(config):
     if CONF_TEXT_SENSOR in config:
         sens = await cg.get_variable(config[CONF_TEXT_SENSOR])
         cg.add(var.set_text_sensor(sens))
+
 
 
