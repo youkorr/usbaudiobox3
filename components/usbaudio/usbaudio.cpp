@@ -2,7 +2,7 @@
 #include "esphome/core/log.h"
 #include "esphome/core/gpio.h"
 #include "driver/gpio.h"
-#include "driver/usb_serial_jtag.h"
+#include "tusb.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -25,18 +25,8 @@ void USBAudioComponent::set_audio_output_mode(int mode) {
 }
 
 bool USBAudioComponent::detect_usb_audio_device_() {
-  // Vérifie si le pilote USB est déjà installé
-  if (!usb_driver_installed_) {
-    usb_serial_jtag_driver_config_t usb_config = USB_SERIAL_JTAG_DRIVER_CONFIG_DEFAULT();
-    esp_err_t err = usb_serial_jtag_driver_install(&usb_config);
-    if (err != ESP_OK && err != ESP_ERR_INVALID_STATE) {
-      ESP_LOGE(TAG, "Échec de l'installation du pilote USB: %s", esp_err_to_name(err));
-      return false;
-    }
-    usb_driver_installed_ = true;
-  }
-
-  return usb_serial_jtag_is_connected();
+  // Utilisation de TinyUSB pour détecter la connexion USB
+  return tud_connected();
 }
 
 void USBAudioComponent::apply_audio_output_() {
