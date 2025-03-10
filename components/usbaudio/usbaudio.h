@@ -31,13 +31,13 @@ class USBAudioComponent : public Component {
 
   AudioOutputMode audio_output_mode_{AudioOutputMode::AUTO_SELECT};
   bool usb_audio_connected_{false};
-  bool usb_driver_installed_{false};
   GPIOPin *dminus_pin_{nullptr};
   GPIOPin *dplus_pin_{nullptr};
 };
 
 }  // namespace usbaudio
 }  // namespace esphome
+
 
 
 
