@@ -45,11 +45,11 @@ void USBAudioComponent::configure_gpio() {
     gpio_config_t io_conf;
     io_conf.intr_type = GPIO_INTR_DISABLE;
     io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pin_bit_mask = (1ULL << dminus_pin_->pin) | (1ULL << dplus_pin_->pin);
+    io_conf.pin_bit_mask = (1ULL << dminus_pin_->get_pin()) | (1ULL << dplus_pin_->get_pin());
     io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
     io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
     gpio_config(&io_conf);
-    ESP_LOGD(TAG, "Configured GPIO pins: D-=%d, D+=%d", dminus_pin_->pin, dplus_pin_->pin);
+    ESP_LOGD(TAG, "Configured GPIO pins: D-=%d, D+=%d", dminus_pin_->get_pin(), dplus_pin_->get_pin());
   } else {
     ESP_LOGE(TAG, "GPIO pins not configured");
   }
@@ -164,8 +164,8 @@ void USBAudioComponent::loop() {
 void USBAudioComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "USB Audio:");
   ESP_LOGCONFIG(TAG, "  Audio Output Mode: %d", static_cast<int>(audio_output_mode_));
-  ESP_LOGCONFIG(TAG, "  D- Pin: %d", dminus_pin_ ? dminus_pin_->pin : -1);
-  ESP_LOGCONFIG(TAG, "  D+ Pin: %d", dplus_pin_ ? dplus_pin_->pin : -1);
+  ESP_LOGCONFIG(TAG, "  D- Pin: %d", dminus_pin_ ? dminus_pin_->get_pin() : -1);
+  ESP_LOGCONFIG(TAG, "  D+ Pin: %d", dplus_pin_ ? dplus_pin_->get_pin() : -1);
 }
 
 }  // namespace usbaudio
