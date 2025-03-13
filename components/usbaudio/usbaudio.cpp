@@ -40,6 +40,21 @@ static void usb_event_callback(const usb_host_client_event_msg_t *event_msg, voi
   }
 }
 
+void USBAudioComponent::configure_gpio() {
+  if (dminus_pin_ && dplus_pin_) {
+    gpio_config_t io_conf;
+    io_conf.intr_type = GPIO_INTR_DISABLE;
+    io_conf.mode = GPIO_MODE_INPUT;
+    io_conf.pin_bit_mask = (1ULL << dminus_pin_->get_pin()) | (1ULL << dplus_pin_->get_pin());
+    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
+    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
+    gpio_config(&io_conf);
+    ESP_LOGD(TAG, "Configured GPIO pins: D-=%d, D+=%d", dminus_pin_->get_pin(), dplus_pin_->get_pin());
+  } else {
+    ESP_LOGE(TAG, "GPIO pins not configured");
+  }
+}
+
 bool USBAudioComponent::detect_usb_audio_device_() {
   if (!device_connected) return false;
 
@@ -73,6 +88,30 @@ void USBAudioComponent::handle_usb_audio_connection_() {
   }
 }
 
+void USBAudioComponent::apply_audio_output_() {
+  if (audio_output_mode_ == AudioOutputMode::AUTO_SELECT) {
+    if (usb_audio_connected_) {
+      switch_to_usb_audio();
+    } else {
+      switch_to_speaker();
+    }
+  } else if (audio_output_mode_ == AudioOutputMode::USB_HEADSET) {
+    switch_to_usb_audio();
+  } else {
+    switch_to_speaker();
+  }
+}
+
+void USBAudioComponent::update_text_sensor() {
+  if (text_sensor_) {
+    if (usb_audio_connected_) {
+      text_sensor_->publish_state("USB Headset Connected");
+    } else {
+      text_sensor_->publish_state("Internal Speaker");
+    }
+  }
+}
+
 void USBAudioComponent::switch_to_usb_audio() {
   ESP_LOGD(TAG, "Switching to USB audio output");
   // Configure USB audio endpoints
@@ -86,6 +125,9 @@ void USBAudioComponent::switch_to_speaker() {
 }
 
 void USBAudioComponent::setup() {
+  // Configure GPIO first
+  configure_gpio();
+
   // Initialize USB Host
   usb_host_config_t host_config = {
     .intr_flags = ESP_INTR_FLAG_LEVEL1
@@ -114,7 +156,17 @@ void USBAudioComponent::setup() {
   ESP_LOGD(TAG, "USB Audio initialized");
 }
 
-// [Rest of existing implementation...]
+void USBAudioComponent::loop() {
+  // Handle USB events
+  usb_host_client_handle_events(client_handle, portMAX_DELAY);
+}
+
+void USBAudioComponent::dump_config() {
+  ESP_LOGCONFIG(TAG, "USB Audio:");
+  ESP_LOGCONFIG(TAG, "  Audio Output Mode: %d", static_cast<int>(audio_output_mode_));
+  ESP_LOGCONFIG(TAG, "  D- Pin: %d", dminus_pin_ ? dminus_pin_->get_pin() : -1);
+  ESP_LOGCONFIG(TAG, "  D+ Pin: %d", dplus_pin_ ? dplus_pin_->get_pin() : -1);
+}
 
 }  // namespace usbaudio
 }  // namespace esphome
