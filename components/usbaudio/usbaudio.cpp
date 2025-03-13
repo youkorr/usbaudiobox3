@@ -45,11 +45,11 @@ void USBAudioComponent::configure_gpio() {
     gpio_config_t io_conf;
     io_conf.intr_type = GPIO_INTR_DISABLE;
     io_conf.mode = GPIO_MODE_INPUT;
-    io_conf.pin_bit_mask = (1ULL << dminus_pin_->get_pin()) | (1ULL << dplus_pin_->get_pin());
+    io_conf.pin_bit_mask = (1ULL << dminus_pin_->pin) | (1ULL << dplus_pin_->pin);
     io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
     io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
     gpio_config(&io_conf);
-    ESP_LOGD(TAG, "Configured GPIO pins: D-=%d, D+=%d", dminus_pin_->get_pin(), dplus_pin_->get_pin());
+    ESP_LOGD(TAG, "Configured GPIO pins: D-=%d, D+=%d", dminus_pin_->pin, dplus_pin_->pin);
   } else {
     ESP_LOGE(TAG, "GPIO pins not configured");
   }
@@ -67,14 +67,13 @@ bool USBAudioComponent::detect_usb_audio_device_() {
   // Check for Audio Interface Class
   const usb_config_desc_t *config_desc;
   if (usb_host_get_active_config_descriptor(device_handle, &config_desc) == ESP_OK) {
-    usb_host_interface_iterator it;
-    usb_host_interface_iterator_init(&it, config_desc);
-    while (usb_host_interface_iterator_next(&it)) {
-      const usb_intf_desc_t *intf_desc = usb_host_interface_iterator_get(&it);
+    const usb_intf_desc_t *intf_desc = (const usb_intf_desc_t *)(config_desc + 1);
+    for (int i = 0; i < config_desc->bNumInterfaces; i++) {
       if (intf_desc->bInterfaceClass == USB_CLASS_AUDIO &&
           intf_desc->bInterfaceSubClass == 0x01) { // Audio Control
         return true;
       }
+      intf_desc = (const usb_intf_desc_t *)((const uint8_t *)intf_desc + intf_desc->bLength);
     }
   }
   return false;
@@ -165,8 +164,8 @@ void USBAudioComponent::loop() {
 void USBAudioComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "USB Audio:");
   ESP_LOGCONFIG(TAG, "  Audio Output Mode: %d", static_cast<int>(audio_output_mode_));
-  ESP_LOGCONFIG(TAG, "  D- Pin: %d", dminus_pin_ ? dminus_pin_->get_pin() : -1);
-  ESP_LOGCONFIG(TAG, "  D+ Pin: %d", dplus_pin_ ? dplus_pin_->get_pin() : -1);
+  ESP_LOGCONFIG(TAG, "  D- Pin: %d", dminus_pin_ ? dminus_pin_->pin : -1);
+  ESP_LOGCONFIG(TAG, "  D+ Pin: %d", dplus_pin_ ? dplus_pin_->pin : -1);
 }
 
 }  // namespace usbaudio
