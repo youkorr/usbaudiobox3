@@ -29,13 +29,13 @@ static void usb_event_callback(const usb_host_client_event_msg_t *event_msg, voi
     case USB_HOST_CLIENT_EVENT_NEW_DEV:
       if (usb_host_device_open(client_handle, event_msg->new_dev.address, &device_handle) == ESP_OK) {
         device_connected = true;
-        component->handle_usb_audio_connection_();
+        component->on_usb_audio_connected();  // Use public method
       }
       break;
       
     case USB_HOST_CLIENT_EVENT_DEV_GONE:
       device_connected = false;
-      component->handle_usb_audio_connection_();
+      component->on_usb_audio_disconnected();  // Use public method
       break;
   }
 }
@@ -65,27 +65,32 @@ bool USBAudioComponent::detect_usb_audio_device_() {
   }
 
   // Check for Audio Interface Class
-  usb_intf_desc_t *intf_desc;
-  for (int i = 0; i < device_desc->bNumConfigurations; i++) {
-    if (usb_host_get_active_config_descriptor(device_handle, &intf_desc) == ESP_OK) {
-      for (int j = 0; j < intf_desc->bNumInterfaces; j++) {
-        if (intf_desc->bInterfaceClass == USB_CLASS_AUDIO &&
-            intf_desc->bInterfaceSubClass == 0x01) { // Audio Control
-          return true;
-        }
+  const usb_config_desc_t *config_desc;
+  if (usb_host_get_active_config_descriptor(device_handle, &config_desc) == ESP_OK) {
+    for (int i = 0; i < config_desc->bNumInterfaces; i++) {
+      const usb_intf_desc_t *intf_desc = &config_desc->interface[i].altsetting[0];
+      if (intf_desc->bInterfaceClass == USB_CLASS_AUDIO &&
+          intf_desc->bInterfaceSubClass == 0x01) { // Audio Control
+        return true;
       }
     }
   }
   return false;
 }
 
-void USBAudioComponent::handle_usb_audio_connection_() {
+void USBAudioComponent::on_usb_audio_connected() {
   bool current_state = detect_usb_audio_device_();
   if (current_state != usb_audio_connected_) {
     usb_audio_connected_ = current_state;
     apply_audio_output_();
     update_text_sensor();
   }
+}
+
+void USBAudioComponent::on_usb_audio_disconnected() {
+  usb_audio_connected_ = false;
+  apply_audio_output_();
+  update_text_sensor();
 }
 
 void USBAudioComponent::apply_audio_output_() {
