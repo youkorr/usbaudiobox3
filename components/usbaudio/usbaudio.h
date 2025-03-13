@@ -4,6 +4,8 @@
 #include "esphome/core/hal.h"
 #include "esphome/components/text_sensor/text_sensor.h"
 #include "usb/usb_host.h"
+#include "usb/usb_types_ch9.h"
+#include "usb/usb_types_stack.h"
 
 namespace esphome {
 namespace usbaudio {
@@ -24,6 +26,7 @@ class USBAudioComponent : public Component {
   void set_dplus_pin(GPIOPin *pin) { dplus_pin_ = pin; }
   void set_audio_output_mode(AudioOutputMode mode) { audio_output_mode_ = mode; }
   void set_text_sensor(text_sensor::TextSensor *text_sensor) { text_sensor_ = text_sensor; }
+  bool is_usb_headset_connected() const { return usb_audio_connected_; }
 
  protected:
   void handle_usb_audio_connection_();
