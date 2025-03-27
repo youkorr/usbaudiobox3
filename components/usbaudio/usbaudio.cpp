@@ -1,6 +1,7 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
 #include "driver/gpio.h"
+#ifdef CONFIG_ESP32_S3_USB_OTG
 
 namespace esphome {
 namespace usbaudio {
