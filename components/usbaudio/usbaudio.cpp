@@ -26,7 +26,7 @@ void USBAudioComponent::set_audio_output_mode(int mode) {
 // ✅ Détection VBUS via GPIO2
 bool USBAudioComponent::detect_usb_audio_device_() {
   gpio_set_direction(GPIO_NUM_2, GPIO_MODE_INPUT);
-  bool vbus_present = gpio_get_level(GPIO_NUM_6);
+  bool vbus_present = gpio_get_level(GPIO_NUM_2);
 
   ESP_LOGD(TAG, "Détection USB VBUS (GPIO2) : %s", vbus_present ? "Présent" : "Absent");
   return vbus_present;
