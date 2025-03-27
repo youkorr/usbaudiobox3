@@ -1,36 +1,41 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.const import CONF_ID
-from esphome.components import text_sensor
+from esphome.components import media_player
+from esphome.const import (
+    CONF_ID,
+)
 
+CODEOWNERS = ["@your_github_username"]
 DEPENDENCIES = ["esp32"]
+MULTI_CONF = False
 
-CONF_AUDIO_OUTPUT_MODE = "audio_output_mode"
-CONF_TEXT_SENSOR = "text_sensor"
-
-AUDIO_OUTPUT_MODES = {
-    "internal_speakers": 0,
-    "usb_headset": 1,
-    "auto_select": 2,
-}
-
+# Namespace for the USB Audio component
 usbaudio_ns = cg.esphome_ns.namespace('usbaudio')
-USBAudioComponent = usbaudio_ns.class_('USBAudioComponent', cg.Component)
+USBAudioComponent = usbaudio_ns.class_('USBAudioComponent', cg.Component, media_player.MediaPlayer)
 
-CONFIG_SCHEMA = cv.Schema({
-    cv.GenerateID(): cv.declare_id(USBAudioComponent),
-    cv.Optional(CONF_AUDIO_OUTPUT_MODE, default="auto_select"): cv.enum(AUDIO_OUTPUT_MODES),
-    cv.Optional(CONF_TEXT_SENSOR): cv.use_id(text_sensor.TextSensor),
-}).extend(cv.COMPONENT_SCHEMA)
+CONFIG_SCHEMA = cv.All(
+    media_player.MEDIA_PLAYER_SCHEMA.extend({
+        cv.Required(CONF_ID): cv.declare_id(USBAudioComponent),
+    }).extend(cv.COMPONENT_SCHEMA)
+)
 
-async def to_code(config):
+def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
-    await cg.register_component(var, config)
     
-    if CONF_AUDIO_OUTPUT_MODE in config:
-        cg.add(var.set_audio_output_mode(AUDIO_OUTPUT_MODES[config[CONF_AUDIO_OUTPUT_MODE]]))
+    # Register component
+    yield cg.register_component(var, config)
+    
+    # Setup media player
+    yield media_player.register_media_player(var, config)
+    
+    # Add any specific USB Audio configuration here
+    # For example, linking to existing configurations or setting up specific parameters
+    cg.add_define('CONFIG_ESP32_S3_USB_OTG')
 
-    if CONF_TEXT_SENSOR in config:
-        sens = await cg.get_variable(config[CONF_TEXT_SENSOR])
-        cg.add(var.set_text_sensor(sens))
+# Optional: Additional build requirements or platform-specific configurations
+def get_build_flags(config):
+    return [
+        '-DCONFIG_ESP32_S3_USB_OTG=1',
+        # Add any necessary compiler flags or include paths
+    ]
 
