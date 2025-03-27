@@ -12,7 +12,7 @@
 #include "driver/spi_master.h"
 #include "driver/i2s_std.h"
 
-#include "bsp/esp-bsp.h"
+
 #include "iot_button.h"
 
 #ifdef __cplusplus
