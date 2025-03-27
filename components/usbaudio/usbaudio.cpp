@@ -3,6 +3,8 @@
 #include "driver/gpio.h"
 #include "bsp_board.h"
 #include "usb/uac_host.h"
+#include "esp_spiffs.h"
+
 
 #ifdef CONFIG_ESP32_S3_USB_OTG
 namespace esphome {
@@ -14,28 +16,6 @@ static const char *const TAG = "usbaudio";
  * SPDX-License-Identifier: CC0-1.0
  */
 
-#include "audio_player.h"
-#include "bsp/esp-bsp.h"
-#include "esp_check.h"
-#include "esp_log.h"
-#include "file_iterator.h"
-#include "ui_audio.h"
-#include "bsp_board.h"
-#include "esp_spiffs.h"
-#include "usb/usb_host.h"
-#include "usb/uac_host.h"
-#include "audio_player.h"
-#include "file_iterator.h"
-#include "mp3_demo.h"
-
-static const char *TAG = "mp3_demo";
-
-#define USB_HOST_TASK_PRIORITY  5
-#define UAC_TASK_PRIORITY       5
-#define USER_TASK_PRIORITY      2
-#define SPIFFS_BASE             "/spiffs"
-#define MP3_FILE_NAME           "/For_Elise.mp3"
-#define DEFAULT_VOLUME          60
 
 static audio_player_t audio_player_type = AUDIO_PLAYER_I2S;
 static QueueHandle_t s_event_queue = NULL;
