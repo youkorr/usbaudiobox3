@@ -1,7 +1,7 @@
 #include "usbaudio.h"
 #include "esphome/core/log.h"
 #include "driver/gpio.h"
-#include "bsp_board.h"
+
 #include "usb/uac_host.h"
 #include "esp_spiffs.h"
 
